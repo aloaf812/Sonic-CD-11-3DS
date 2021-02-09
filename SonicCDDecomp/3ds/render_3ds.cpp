@@ -3,7 +3,7 @@
 
 // https://github.com/bubble2k16/snes9x_3ds/blob/3e5cdba3577aafefb0860966a3daf694ece8e168/source/pixform.h#L248
 #define BUILD_PIXEL_RGB5551(R,G,B) (((int) (R) << 11) | ((int) (G) << 6) | (int) ((B) << 1) | 1)
-#define RGB565_to_RGBA5551(px) (BUILD_PIXEL_RGB5551( (px & 0xf800) >> 11, (px & 0x07e0) >> 6, (px & 0x001f)))
+#define CONV(px) (BUILD_PIXEL_RGB5551( (px & 0xf800) >> 11, (px & 0x07e0) >> 6, (px & 0x001f)))
 
 int spriteIndex[7] = { 0 };
 int tileIndex[4]   = { 0 };
@@ -116,7 +116,7 @@ void _3ds_cacheSpriteSurface(int sheetID) {
 	GFXSurface* surf = &gfxSurface[sheetID];
 	int height = surf->height;
 	int width  = surf->width;
-	int depth  = surf->depth;
+	int depth  = 0;
     	byte *gfxDataPtr   = &graphicData[surf->dataPosition];
 	_3ds_cacheGfxSurface(gfxDataPtr, &_3ds_textureData[sheetID], width, height, false);
 }
@@ -168,7 +168,7 @@ void _3ds_cacheGfxSurface(byte* gfxDataPtr, C3D_Tex* dst,
 			for (int tx = 0; tx < 8; tx++) {
 				if (x < width && y < height) {
 					if (*gptr > 0)
-						*tilePtr = RGB565_to_RGBA5551(activePalette[*gptr]);
+						*tilePtr = CONV(activePalette[*gptr]);
 					else
 						*tilePtr = 0;
 				}

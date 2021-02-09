@@ -146,6 +146,48 @@ void ProcessStage(void)
             ResetBackgroundSettings();
             LoadStageFiles();
 
+#if RETRO_HARDWARE_RENDER && !RETRO_USING_C2D
+            texBufferMode = 0;
+            for (int i = 0; i < LAYER_COUNT; i++) {
+                if (stageLayouts[i].type == LAYER_3DSKY)
+                    texBufferMode = 1;
+            }
+            for (int i = 0; i < hParallax.entryCount; i++) {
+                if (hParallax.deform[i]) 
+                    texBufferMode = 1;
+            }
+
+            if (tilesetGFXData[0x32002] > 0)
+                texBufferMode = 0;
+
+            if (texBufferMode) {
+                for (int i = 0; i < TILEUV_SIZE; i += 4) {
+                    tileUVArray[i + 0] = (i >> 2) % 28 * 18 + 1;
+                    tileUVArray[i + 1] = (i >> 2) / 28 * 18 + 1;
+                    tileUVArray[i + 2] = tileUVArray[i + 0] + 16;
+                    tileUVArray[i + 3] = tileUVArray[i + 1] + 16;
+                }
+                tileUVArray[TILEUV_SIZE - 4] = 487.0f;
+                tileUVArray[TILEUV_SIZE - 3] = 487.0f;
+                tileUVArray[TILEUV_SIZE - 2] = 503.0f;
+                tileUVArray[TILEUV_SIZE - 1] = 503.0f;
+            }
+            else {
+                for (int i = 0; i < TILEUV_SIZE; i += 4) {
+                    tileUVArray[i + 0] = (i >> 2 & 31) * 16;
+                    tileUVArray[i + 1] = (i >> 2 >> 5) * 16;
+                    tileUVArray[i + 2] = tileUVArray[i + 0] + 16;
+                    tileUVArray[i + 3] = tileUVArray[i + 1] + 16;
+                }
+            }
+
+            UpdateHardwareTextures();
+            gfxIndexSize        = 0;
+            gfxVertexSize       = 0;
+            gfxIndexSizeOpaque  = 0;
+            gfxVertexSizeOpaque = 0;
+#endif
+
             break;
         case STAGEMODE_NORMAL:
             drawStageGFXHQ = false;
@@ -236,6 +278,13 @@ void ProcessStage(void)
                 ProcessPausedObjects();
             }
 
+#if RETRO_HARDWARE_RENDER && !RETRO_USING_C2D
+            gfxIndexSize        = 0;
+            gfxVertexSize       = 0;
+            gfxIndexSizeOpaque  = 0;
+            gfxVertexSizeOpaque = 0;
+#endif
+
             DrawObjectList(0);
             DrawObjectList(1);
             DrawObjectList(2);
@@ -291,7 +340,7 @@ void LoadStageFiles(void)
                 SetObjectTypeName(strBuffer, i + scriptID);
             }
 
-            if (Engine.usingBytecode) {
+            if (Engine.usingBytecode && !forceUseScripts) {
                 GetFileInfo(&infoStore);
                 CloseFile();
                 LoadBytecode(4, scriptID);
@@ -330,7 +379,7 @@ void LoadStageFiles(void)
                 strBuffer[fileBuffer2] = 0;
                 SetObjectTypeName(strBuffer, scriptID + i);
             }
-            if (Engine.usingBytecode) {
+            if (Engine.usingBytecode && !forceUseScripts) {
                 for (byte i = 0; i < stageObjectCount; ++i) {
                     FileRead(&fileBuffer2, 1);
                     FileRead(strBuffer, fileBuffer2);
@@ -655,7 +704,12 @@ void LoadStageChunks()
             entry[0] -= 4 * (entry[0] >> 2);
 
             tiles128x128.tileIndex[i]  = entry[1] + (entry[0] << 8);
+#if RETRO_SOFTWARE_RENDER || RETRO_USING_C2D
             tiles128x128.gfxDataPos[i] = tiles128x128.tileIndex[i] << 8;
+#endif
+#if RETRO_HARDWARE_RENDER && !RETRO_USING_C2D
+            tiles128x128.gfxDataPos[i] = tiles128x128.tileIndex[i] << 2;
+#endif
 
             tiles128x128.collisionFlags[0][i] = entry[2] >> 4;
             tiles128x128.collisionFlags[1][i] = entry[2] - ((entry[2] >> 4) << 4);
@@ -969,10 +1023,11 @@ void ResetBackgroundSettings()
         bgDeformationData3[i] = 0;
     }
 }
-void SetLayerDeformation(int deformID, int deformationA, int deformationB, int deformType, int deformOffset, int deformCount)
+
+void SetLayerDeformation(int selectedDef, int waveLength, int waveWidth, int waveType, int YPos, int waveSize)
 {
     int *deformPtr = nullptr;
-    switch (deformID) {
+    switch (selectedDef) {
         case DEFORM_FG: deformPtr = bgDeformationData0; break;
         case DEFORM_FG_WATER: deformPtr = bgDeformationData1; break;
         case DEFORM_BG: deformPtr = bgDeformationData2; break;
@@ -980,33 +1035,45 @@ void SetLayerDeformation(int deformID, int deformationA, int deformationB, int d
         default: break;
     }
 
-    if (deformType == 1) {
-        int* d = &deformPtr[deformOffset];
-        for (int i = 0; i < deformCount; ++i) {
-            *d = deformationB * sinVal512[(i << 9) / deformationA & 0x1FF] >> 9;
-            ++d;
+#if RETRO_SOFTWARE_RENDER || RETRO_USING_C2D
+    int shift = 9;
+#endif
+
+#if RETRO_HARDWARE_RENDER && !RETRO_USING_C2D
+    int shift = 5;
+#endif
+
+    int id = 0;
+    if (waveType == 1) {
+        id     = YPos;
+        for (int i = 0; i < waveSize; ++i) {
+            deformPtr[id] = waveWidth * sinVal512[(i << 9) / waveLength & 0x1FF] >> shift;
+            ++id;
         }
     }
     else {
         for (int i = 0; i < 0x200 * 0x100; i += 0x200) {
-            *deformPtr = deformationB * sinVal512[i / deformationA & 0x1FF] >> 9;
-            if (*deformPtr >= deformationB)
-                *deformPtr = deformationB - 1;
-            ++deformPtr;
+            int val       = waveWidth * sinVal512[i / waveLength & 0x1FF] >> shift;
+            deformPtr[id] = val;
+#if RETRO_SOFTWARE_RENDER || RETRO_USING_C2D
+            if (deformPtr[id] >= waveWidth)
+                deformPtr[id] = waveWidth - 1;
+#endif
+            ++id;
         }
     }
 
-    switch (deformID) {
-        case 0:
+    switch (selectedDef) {
+        case DEFORM_FG:
             for (int i = DEFORM_STORE; i < DEFORM_COUNT; ++i) bgDeformationData0[i] = bgDeformationData0[i - DEFORM_STORE];
             break;
-        case 1:
+        case DEFORM_FG_WATER:
             for (int i = DEFORM_STORE; i < DEFORM_COUNT; ++i) bgDeformationData1[i] = bgDeformationData1[i - DEFORM_STORE];
             break;
-        case 2:
+        case DEFORM_BG:
             for (int i = DEFORM_STORE; i < DEFORM_COUNT; ++i) bgDeformationData2[i] = bgDeformationData2[i - DEFORM_STORE];
             break;
-        case 3:
+        case DEFORM_BG_WATER:
             for (int i = DEFORM_STORE; i < DEFORM_COUNT; ++i) bgDeformationData3[i] = bgDeformationData3[i - DEFORM_STORE];
             break;
         default: break;

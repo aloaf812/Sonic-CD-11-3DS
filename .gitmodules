@@ -1,0 +1,3 @@
+[submodule "SonicCDDecomp/ghc"]
+	path = SonicCDDecomp/ghc
+	url = https://github.com/gulrak/filesystem

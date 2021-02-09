@@ -56,6 +56,8 @@ bool processEvents()
             case SDL_APP_WILLENTERFOREGROUND: /*Engine.Callback(CALLBACK_ENTERFG);*/ break;
             case SDL_APP_TERMINATING: Engine.gameMode = ENGINE_EXITGAME; break;
 #endif
+
+#ifdef RETRO_USING_MOUSE
             case SDL_MOUSEMOTION:
 #if RETRO_USING_SDL2
                 if (SDL_GetNumTouchFingers(SDL_GetTouchDevice(RETRO_TOUCH_DEVICE)) <= 0) { // Touch always takes priority over mouse
@@ -92,6 +94,9 @@ bool processEvents()
                 }
 #endif
                 break;
+#endif
+
+#ifdef RETRO_USING_TOUCH
 #if RETRO_USING_SDL2
             case SDL_FINGERMOTION:
                 touches = SDL_GetNumTouchFingers(SDL_GetTouchDevice(RETRO_TOUCH_DEVICE));
@@ -114,6 +119,7 @@ bool processEvents()
                 }
                 break;
             case SDL_FINGERUP: touches = SDL_GetNumTouchFingers(SDL_GetTouchDevice(RETRO_TOUCH_DEVICE)); break;
+#endif
 #endif
             case SDL_KEYDOWN:
                 switch (Engine.sdlEvents.key.keysym.sym) {
@@ -251,6 +257,9 @@ bool RetroEngine::Init()
 {
     CalculateTrigAngles();
     GenerateBlendLookupTable();
+    InitUserdata();
+    initMods();
+    char dest[0x200];
 #if RETRO_PLATFORM == RETRO_UWP
     static char resourcePath[256] = { 0 };
 
@@ -261,10 +270,9 @@ bool RetroEngine::Init()
         std::copy(path.begin(), path.end(), resourcePath);
     }
 
-    char datapath[256];
-    strcat(datapath, resourcePath);
-    strcat(datapath, "\\Data.rsdk");
-    CheckRSDKFile(datapath);
+    strcat(dest, resourcePath);
+    strcat(dest, "\\");
+    strcat(dest, Engine.dataFile);
 #else
     if (!CheckRSDKFile(BASE_PATH "Data.rsdk")) {
 	    printf("Error: RSDK file not found.\n"
@@ -275,7 +283,6 @@ bool RetroEngine::Init()
     }
     InitUserdata();
 #endif
-
     gameMode = ENGINE_EXITGAME;
     running  = false;
     if (LoadGameConfig("Data/Game/GameConfig.bin")) {
@@ -359,8 +366,27 @@ void RetroEngine::Run()
 
             if (!masterPaused || frameStep) {
                 switch (gameMode) {
-                    case ENGINE_DEVMENU: processStageSelect(); break;
-                    case ENGINE_MAINGAME: ProcessStage(); break;
+                    case ENGINE_DEVMENU:
+#if RETRO_HARDWARE_RENDER && !RETRO_USING_C2D
+                        gfxIndexSize        = 0;
+                        gfxVertexSize       = 0;
+                        gfxIndexSizeOpaque  = 0;
+                        gfxVertexSizeOpaque = 0;
+#endif
+                        processStageSelect();
+                        break;
+                    case ENGINE_MAINGAME:
+#if RETRO_HARDWARE_RENDER && !RETRO_USING_C2D
+                        gfxIndexSize        = 0;
+                        gfxVertexSize       = 0;
+                        gfxIndexSizeOpaque  = 0;
+                        gfxVertexSizeOpaque = 0;
+                        vertexSize3D        = 0;
+                        indexSize3D         = 0;
+                        render3DEnabled     = false;
+#endif
+                        ProcessStage(); 
+                        break;
                     case ENGINE_INITDEVMENU:
                         LoadGameConfig("Data/Game/GameConfig.bin");
                         initDevMenu();
@@ -414,6 +440,7 @@ void RetroEngine::Run()
     StopVideoPlayback();
     ReleaseRenderDevice();
     writeSettings();
+    saveMods();
 
 #if RETRO_USING_SDL1 || RETRO_USING_SDL2 || RETRO_USING_SDL1_AUDIO
     SDL_QuitSubSystem(SDL_INIT_AUDIO);
@@ -660,7 +687,7 @@ void RetroEngine::Callback(int callbackID)
         case CALLBACK_AGEGATE:
             // Newer versions of the game wont continue without this
             // Thanks to Sappharad for pointing this out
-            globalVariables[135] = 1;
+            SetGlobalVariableByName("HaveLoadAllGDPRValue", 1);
             break;
     }
 }

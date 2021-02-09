@@ -787,7 +787,7 @@ void DrawHLineScrollLayer(int layerID)
         lastXSize = layer->width;
         yscrollOffset    = yScrollOffset;
         lineScroll       = layer->lineScroll;
-        for (int i = 0; i < PARALLAX_COUNT; ++i) hParallax.tilePos[i] = xScrollOffset;
+        for (int i = 0; i < PARALLAX_COUNT; ++i) hParallax.linePos[i] = xScrollOffset;
         deformationData  = &bgDeformationData0[(byte)(yscrollOffset + layer->deformationOffset)];
         deformationDataW = &bgDeformationData1[(byte)(yscrollOffset + waterDrawPos + layer->deformationOffsetW)];
     }
@@ -796,14 +796,14 @@ void DrawHLineScrollLayer(int layerID)
         if (lastXSize != layerwidth) {
             int fullLayerwidth = layerwidth << 7;
             for (int i = 0; i < hParallax.entryCount; ++i) {
-                hParallax.tilePos[i] = xScrollOffset * hParallax.parallaxFactor[i] >> 8;
+                hParallax.linePos[i] = xScrollOffset * hParallax.parallaxFactor[i] >> 8;
                 hParallax.scrollPos[i] += hParallax.scrollSpeed[i];
                 if (hParallax.scrollPos[i] > fullLayerwidth << 16)
                     hParallax.scrollPos[i] -= fullLayerwidth << 16;
                 if (hParallax.scrollPos[i] < 0)
                     hParallax.scrollPos[i] += fullLayerwidth << 16;
-                hParallax.tilePos[i] += hParallax.scrollPos[i] >> 16;
-                hParallax.tilePos[i] %= fullLayerwidth;
+                hParallax.linePos[i] += hParallax.scrollPos[i] >> 16;
+                hParallax.linePos[i] %= fullLayerwidth;
             }
         }
         lastXSize = layerwidth;
@@ -822,11 +822,10 @@ void DrawHLineScrollLayer(int layerID)
 #if RETRO_USING_C2D
     clearScreen = 1;
     for (int sy = TILE_SIZE - tileY16 - 16; sy < SCREEN_YSIZE; sy += 16) {
-        int chunkX = hParallax.tilePos[*scrollIndex];
+        int chunkX = hParallax.linePos[*scrollIndex];
         int fullLayerWidth = layerwidth << 7;
         chunkX %= fullLayerWidth;
 
-        // TODO: account for deformation data (render parallax effects correctly)
         if (sy < waterDrawPos) {
 	    if (hParallax.deform[*scrollIndex])
 	        chunkX += *deformationData;
@@ -882,7 +881,7 @@ void DrawHLineScrollLayer(int layerID)
             activePalette = fullPalette[*lineBuffer];
             activePalette32 = fullPalette32[*lineBuffer];
             lineBuffer++;
-            int chunkX = hParallax.tilePos[*scrollIndex];
+            int chunkX = hParallax.linePos[*scrollIndex];
             if (i == 0) {
                 if (hParallax.deform[*scrollIndex])
                     chunkX += *deformationData;
@@ -1363,7 +1362,7 @@ void DrawVLineScrollLayer(int layerID)
         lastYSize           = layer->height;
         xscrollOffset       = xScrollOffset;
         lineScroll          = layer->lineScroll;
-        vParallax.tilePos[0] = yScrollOffset;
+        vParallax.linePos[0] = yScrollOffset;
         vParallax.deform[0] = true;
         deformationData     = &bgDeformationData0[(byte)(xScrollOffset + layer->deformationOffset)];
     }
@@ -1372,14 +1371,14 @@ void DrawVLineScrollLayer(int layerID)
         if (lastYSize != layerheight) {
             int fullLayerheight = layerheight << 7;
             for (int i = 0; i < vParallax.entryCount; ++i) {
-                vParallax.tilePos[i] = xScrollOffset * vParallax.parallaxFactor[i] >> 8;
+                vParallax.linePos[i] = xScrollOffset * vParallax.parallaxFactor[i] >> 8;
                 vParallax.scrollPos[i] += vParallax.scrollSpeed[i];
                 if (vParallax.scrollPos[i] > fullLayerheight << 16)
                     vParallax.scrollPos[i] -= fullLayerheight << 16;
                 if (vParallax.scrollPos[i] < 0)
                     vParallax.scrollPos[i] += fullLayerheight << 16;
-                vParallax.tilePos[i] += vParallax.scrollPos[i] >> 16;
-                vParallax.tilePos[i] %= fullLayerheight;
+                vParallax.linePos[i] += vParallax.scrollPos[i] >> 16;
+                vParallax.linePos[i] %= fullLayerheight;
             }
             layerheight = fullLayerheight >> 7;
         }
@@ -1399,7 +1398,7 @@ void DrawVLineScrollLayer(int layerID)
     // Draw Above Water (if applicable)
     int drawableLines = waterDrawPos;
     while (drawableLines--) {
-        int chunkY = vParallax.tilePos[*scrollIndex];
+        int chunkY = vParallax.linePos[*scrollIndex];
         if (vParallax.deform[*scrollIndex])
             chunkY += *deformationData;
         ++deformationData;
