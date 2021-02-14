@@ -93,12 +93,11 @@ typedef unsigned int uint;
 #define RETRO_USING_SDL1       (0)
 #define RETRO_USING_C2D        (0)
 #define RETRO_USING_SDL1_AUDIO (0)
-#elif RETRO_PLATFORM == RETRO_3DS // 3DS only has support for SDL 1.2, so drawing functions
-				  // and input are being redone using libctru and Citro2D
+#elif RETRO_PLATFORM == RETRO_3DS
 #define RETRO_USING_SDL2       (0)
 #define RETRO_USING_SDL1       (0)
 #define RETRO_USING_C2D        (1)
-#define RETRO_USING_SDL1_AUDIO (1)
+#define RETRO_USING_SDL1_AUDIO (1)  // broken on O3DS?
 #else // Since its an else & not an elif these platforms probably aren't supported yet
 #define RETRO_USING_SDL2       (0)
 #define RETRO_USING_SDL1       (0)
@@ -276,7 +275,7 @@ extern bool engineDebugMode;
 
 #if RETRO_PLATFORM == RETRO_3DS
 #include "3ds/debug_3ds.hpp"
-//#include "3ds/3ds_audio.hpp"
+#include "3ds/audio_3ds.hpp"
 #include "3ds/render_3ds.hpp"
 #endif
 
