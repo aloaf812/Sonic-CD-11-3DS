@@ -3,33 +3,39 @@ ifeq ($(STATIC),1)
     CXXFLAGS_ALL += -static
 endif
 
-CXXFLAGS_ALL += -MMD -MP -MF objects/$*.d $(shell pkg-config --cflags $(PKG_CONFIG_STATIC_FLAG) sdl2 vorbisfile vorbis theoradec) -Idependencies/all/theoraplay $(CXXFLAGS)
+CXXFLAGS_ALL += -MMD -MP -MF objects/$*.d $(shell pkg-config --cflags $(PKG_CONFIG_STATIC_FLAG) sdl2 vorbisfile vorbis theoradec) $(CXXFLAGS) \
+   -Idependencies/all/filesystem/include \
+   -Idependencies/all/theoraplay \
+   -Idependencies/all/upng
 LDFLAGS_ALL += $(LDFLAGS)
 LIBS_ALL += $(shell pkg-config --libs $(PKG_CONFIG_STATIC_FLAG) sdl2 vorbisfile vorbis theoradec) -pthread $(LIBS)
 
-SOURCES = dependencies/all/theoraplay/theoraplay.c \
-		RSDKv3/Animation.cpp \
-		RSDKv3/Audio.cpp \
-		RSDKv3/Collision.cpp \
-		RSDKv3/Debug.cpp \
-		RSDKv3/Drawing.cpp \
-		RSDKv3/Ini.cpp \
-		RSDKv3/Input.cpp \
-		RSDKv3/main.cpp \
-		RSDKv3/Math.cpp \
-		RSDKv3/Object.cpp \
-		RSDKv3/Palette.cpp \
-		RSDKv3/Player.cpp \
-		RSDKv3/Reader.cpp \
-		RSDKv3/RetroEngine.cpp \
-		RSDKv3/Scene.cpp \
-		RSDKv3/Scene3D.cpp \
-		RSDKv3/Script.cpp \
-		RSDKv3/Sprite.cpp \
-		RSDKv3/String.cpp \
-		RSDKv3/Text.cpp \
-		RSDKv3/Userdata.cpp \
-		RSDKv3/Video.cpp
+
+SOURCES = \
+  dependencies/all/theoraplay/theoraplay.c \
+  dependencies/all/upng/upng.cpp \
+  SonicCDDecomp/Animation.cpp \
+  SonicCDDecomp/Audio.cpp \
+  SonicCDDecomp/Collision.cpp \
+  SonicCDDecomp/Debug.cpp \
+  SonicCDDecomp/Drawing.cpp \
+  SonicCDDecomp/Ini.cpp \
+  SonicCDDecomp/Input.cpp \
+  SonicCDDecomp/main.cpp \
+  SonicCDDecomp/Math.cpp \
+  SonicCDDecomp/Object.cpp \
+  SonicCDDecomp/Palette.cpp \
+  SonicCDDecomp/Player.cpp \
+  SonicCDDecomp/Reader.cpp \
+  SonicCDDecomp/RetroEngine.cpp \
+  SonicCDDecomp/Scene.cpp \
+  SonicCDDecomp/Scene3D.cpp \
+  SonicCDDecomp/Script.cpp \
+  SonicCDDecomp/Sprite.cpp \
+  SonicCDDecomp/String.cpp \
+  SonicCDDecomp/Text.cpp \
+  SonicCDDecomp/Userdata.cpp \
+  SonicCDDecomp/Video.cpp
 
 	  
 ifneq ($(FORCE_CASE_INSENSITIVE),)
