@@ -161,6 +161,9 @@ typedef unsigned int uint;
 #define Uint64 u64
 #endif
 
+#ifndef COMMIT
+#define COMMIT "unknown"
+#endif
 
 enum RetroLanguages { RETRO_EN = 0, RETRO_FR = 1, RETRO_IT = 2, RETRO_DE = 3, RETRO_ES = 4, RETRO_JP = 5 };
 
