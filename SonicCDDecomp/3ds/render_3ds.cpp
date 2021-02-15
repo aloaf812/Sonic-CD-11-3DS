@@ -81,7 +81,12 @@ static inline int powOfTwo(int in)
 	return out;
 }
 
-// 3DS doesn't like 16x16384 tiles
+void SWTilePosToHWTilePos(int sx, int sy, int* dx, int* dy) {
+	*dx = sx + (16 * (sy / 512));
+	*dy = sy % 512;
+}
+
+// 3DS doesn't like 16x16384 textures
 // who knew
 void _3ds_rearrangeTileData(byte* gfxDataPtr, byte* dstPtr) {
 	const int swidth = 16,  sheight = 16384;
@@ -91,19 +96,18 @@ void _3ds_rearrangeTileData(byte* gfxDataPtr, byte* dstPtr) {
 	byte* dptr = dstPtr;
 
 	for (int i = 0; i < 512 * 512; i++) {
-		sptr = gfxDataPtr + (swidth * sy) + sx;
 		dptr = dstPtr + (dwidth * dy) + dx;
 
 		*dptr = *sptr;
 
+		sptr++;
 		sx++;
-		if (sx >= swidth) {
+		if (sx == swidth) {
 			sx = 0;
 			sy++;
 		}
 
-		dx = sx + (16 * (sy / 512));
-		dy = sy % 512;
+		SWTilePosToHWTilePos(sx, sy, &dx, &dy);
 	}
 }
 
@@ -193,12 +197,14 @@ void _3ds_cacheGfxSurface(byte* gfxDataPtr, C3D_Tex* dst,
 	C3D_TexUpload(dst, buffer);
 
 	// write buffer to file
+	/*
 	if (write) {
 		FILE* f = fopen("/temp.buf", "w+");
 		fwrite(buffer, w * h * sizeof(s16), 1, f);
 		fclose(f);
 		printf("saved to temp.buf\n");
 	}
+	*/
 
 	linearFree(buffer);
 }
@@ -259,27 +265,45 @@ void _3ds_prepSprite(int XPos, int YPos, int width, int height,
     	}
 }
 
-void _3ds_prepTile(int XPos, int YPos, int tileX, int tileY, int direction) {
+void _3ds_prepTile(int XPos, int YPos, int dataPos, int direction) {
 	const int tileSize = 16;
+
+	// the original gif for tilesets is only 16x16384
+	// any y coordinates beyond this are invalid
+	if (dataPos > 262144) {
+		printf("Invalid position: %d\n", dataPos);
+		return;
+	} else if ((dataPos / 16) == 16384) {
+		return;
+	}
+
+	int tileX;
+	int tileY;
 
 	if (tileIndex < TILES_MAX_3DS) {
 		_3ds_tile tile;
 
+		//int ty = tileY;
+
 		// convert coordinates to work with the 3DS tile texture data
-		tileX = tileX + (16 * (tileX / 512));
-		tileY = tileY % 512;
+		SWTilePosToHWTilePos(dataPos % 16, dataPos / 16, &tileX, &tileY);
+		tileY %= 256;	// tile positions seem more accurate for some reason?
+
+		//printf("Original Y Pos: %d, X: %d, Y: %d\n", ogYPos, tileX, tileY);
+
+		//printf("Old y: %d, X: %d, Y: %d\n", ty, tileX, tileY);
 
 		tile.subtex.width  = 512;
 		tile.subtex.height = 512;
-		tile.subtex.left = (float) tileX / _3ds_tilesetData[0].width;
-		tile.subtex.top = 1 - (float) tileY / _3ds_tilesetData[0].height;
-		tile.subtex.right = (float) (tileX + tileSize) / _3ds_tilesetData[0].width;
-		tile.subtex.bottom = 1 - (float) (tileY + tileSize) / _3ds_tilesetData[0].height;
+		tile.subtex.left = (float) tileX / _3ds_tilesetData[paletteIndex].width;
+		tile.subtex.top = 1 - (float) tileY / _3ds_tilesetData[paletteIndex].height;
+		tile.subtex.right = (float) (tileX + tileSize) / _3ds_tilesetData[paletteIndex].width;
+		tile.subtex.bottom = 1 - (float) (tileY + tileSize) / _3ds_tilesetData[paletteIndex].height;
 
 		tile.params.pos.x = XPos;
 		tile.params.pos.y = YPos;
-		tile.params.pos.w = 16;
-		tile.params.pos.h = 16;
+		tile.params.pos.w = tileSize;
+		tile.params.pos.h = tileSize;
 		tile.params.center.x = 0;
 		tile.params.center.y = 0;
 

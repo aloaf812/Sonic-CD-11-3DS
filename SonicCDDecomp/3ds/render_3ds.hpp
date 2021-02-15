@@ -2,7 +2,7 @@
 #define RENDER_3DS_H
 
 #define SPRITES_MAX 256
-#define TILES_MAX_3DS 768
+#define TILES_MAX_3DS 16000
 #define TILE_MAXSIZE 6    	// arbitrary, but I'm banking on the number of colors cycled
 				// to be around this
 
@@ -48,5 +48,5 @@ void _3ds_cacheGfxSurface(byte* gfxDataPtr, C3D_Tex* dst,
 void _3ds_prepSprite(int XPos, int YPos, int width, int height, 
 		     int sprX, int sprY, int sheetID, int direction,
 		     float scaleX, float scaleY, float angle);
-void _3ds_prepTile(int XPos, int YPos, int tileX, int tileY, int direction);
+void _3ds_prepTile(int XPos, int YPos, int dataPos, int direction);
 #endif
