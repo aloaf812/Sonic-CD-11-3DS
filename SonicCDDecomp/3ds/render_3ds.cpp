@@ -273,7 +273,7 @@ void _3ds_prepTile(int XPos, int YPos, int dataPos, int direction) {
 	if (dataPos > 262144) {
 		printf("Invalid position: %d\n", dataPos);
 		return;
-	} else if ((dataPos / 16) == 16384) {
+	} else if (dataPos == 0) {
 		return;
 	}
 
@@ -287,7 +287,7 @@ void _3ds_prepTile(int XPos, int YPos, int dataPos, int direction) {
 
 		// convert coordinates to work with the 3DS tile texture data
 		SWTilePosToHWTilePos(dataPos % 16, dataPos / 16, &tileX, &tileY);
-		tileY %= 256;	// tile positions seem more accurate for some reason?
+		tileY = (tileY + 256) % 512;	// tile positions seem more accurate for some reason?
 
 		//printf("Original Y Pos: %d, X: %d, Y: %d\n", ogYPos, tileX, tileY);
 
@@ -302,8 +302,27 @@ void _3ds_prepTile(int XPos, int YPos, int dataPos, int direction) {
 
 		tile.params.pos.x = XPos;
 		tile.params.pos.y = YPos;
-		tile.params.pos.w = tileSize;
-		tile.params.pos.h = tileSize;
+
+		switch (direction) {
+			case FLIP_X:
+				tile.params.pos.w = -tileSize;
+				tile.params.pos.h = tileSize;
+				break;
+			case FLIP_Y:
+				tile.params.pos.w = tileSize;
+				tile.params.pos.h = tileSize;
+				break;
+			case FLIP_XY:
+				tile.params.pos.w = -tileSize;
+				tile.params.pos.h = -tileSize;
+				break;
+			default:
+				tile.params.pos.w = tileSize;
+				tile.params.pos.h = tileSize;
+				break;
+		}
+
+
 		tile.params.center.x = 0;
 		tile.params.center.y = 0;
 
