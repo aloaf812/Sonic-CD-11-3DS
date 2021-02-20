@@ -108,6 +108,9 @@ void ProcessStage(void)
     int updateMax = 0; 
     switch (stageMode) {
         case STAGEMODE_LOAD: // Startup
+#if RETRO_USING_C2D
+    _3ds_delTileSurface();
+#endif
             fadeMode = 0;
             SetActivePalette(0, 0, 256);
 
@@ -258,10 +261,6 @@ void LoadStageFiles(void)
     byte fileBuffer2 = 0;
     int scriptID    = 1;
     char strBuffer[0x100];
-
-#if RETRO_USING_C2D
-    _3ds_delTileSurface();
-#endif
 
     if (!CheckCurrentStageFolder(stageListPosition)) {
         printLog("Loading Scene %s - %s", stageListNames[activeStageList], stageList[activeStageList][stageListPosition].name);

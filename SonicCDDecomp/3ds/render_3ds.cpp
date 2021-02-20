@@ -273,8 +273,6 @@ void _3ds_prepTile(int XPos, int YPos, int dataPos, int direction) {
 	if (dataPos > 262144) {
 		printf("Invalid position: %d\n", dataPos);
 		return;
-	} else if (dataPos == 0) {
-		return;
 	}
 
 	int tileX;
