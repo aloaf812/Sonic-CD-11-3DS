@@ -138,6 +138,9 @@ void _3ds_cacheTileSurface(byte* tilesetGfxPtr) {
 void _3ds_delTileSurface() {
 	for (int i = 0; i < cachedPalettes; i++) 
 		C3D_TexDelete(&_3ds_tilesetData[i]);
+
+	// does this fix that memory leak?
+	cachedPalettes = 0;
 }
 
 void _3ds_cacheGfxSurface(byte* gfxDataPtr, C3D_Tex* dst,
@@ -285,7 +288,7 @@ void _3ds_prepTile(int XPos, int YPos, int dataPos, int direction) {
 
 		// convert coordinates to work with the 3DS tile texture data
 		SWTilePosToHWTilePos(dataPos % 16, dataPos / 16, &tileX, &tileY);
-		tileY = (tileY + 256) % 512;	// tile positions seem more accurate for some reason?
+		//tileY = (tileY + 256) % 512;	// tile positions seem more accurate for some reason?
 
 		//printf("Original Y Pos: %d, X: %d, Y: %d\n", ogYPos, tileX, tileY);
 
