@@ -81,8 +81,6 @@ static inline int powOfTwo(int in)
 	return out;
 }
 
-
-
 // 3DS doesn't like 16x16384 textures
 // who knew
 void _3ds_rearrangeTileData(byte* gfxDataPtr, byte* dstPtr) {

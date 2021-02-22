@@ -280,7 +280,7 @@ void RenderRenderDevice()
     SDL_RenderClear(Engine.renderer);
 #elif RETRO_USING_C2D
     C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-    C2D_TargetClear(Engine.topScreen, C2D_Color32f(0.1f, 0.1f, 0.1f, 1.0f));
+    C2D_TargetClear(Engine.topScreen, C2D_Color32f(0.0f, 0.0f, 0.0f, 1.0f));
     C2D_SceneBegin(Engine.topScreen);
 
     // old code to test that textures were loading properly
