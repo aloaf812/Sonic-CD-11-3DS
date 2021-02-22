@@ -749,10 +749,32 @@ void DrawHLineScrollLayer(int layerID)
     int tileY         = (tileYPos & 0x7F) >> 4;
 
 #if RETRO_USING_C2D
-    for (int sy = TILE_SIZE - tileY16; sy < SCREEN_YSIZE; sy += 16) {
+    for (int sy = TILE_SIZE - tileY16 - 16; sy < SCREEN_YSIZE; sy += 16) {
         int chunkX = hParallax.tilePos[*scrollIndex];
         int fullLayerWidth = layerwidth << 7;
         chunkX %= fullLayerWidth;
+
+        // TODO: account for deformation data (render parallax effects correctly)
+        
+        int chunk      = (layer->tiles[(chunkX >> 7) + (chunkY << 8)] << 6) + ((chunkX & 0x7F) >> 4) + 8 * tileY;
+        int chunkXPos  = chunkX >> 7;
+        int chunkTileX = ((chunkX & 0x7F) >> 4) + 1;
+
+        for (int sx = -(chunkX & 0xF); sx < SCREEN_XSIZE; sx += 16) {
+                _3ds_prepTile(sx, sy, tiles128x128.gfxDataPos[chunk], tiles128x128.direction[chunk]);
+
+                if (chunkTileX <= 7)
+                    chunk++;
+                else {
+                    chunkXPos++;
+                    if (chunkXPos >= layerwidth)
+                        chunkXPos = 0;
+                    chunkTileX = 0;
+                    chunk = (layer->tiles[chunkXPos + (chunkY << 8)] << 6) + 8 * tileY;
+                }
+
+                chunkTileX++;
+        }
 
         scrollIndex += 16;
         tileY++;
@@ -765,66 +787,32 @@ void DrawHLineScrollLayer(int layerID)
 
             tileY = 0;
         }
-
-        // TODO: account for deformation data
-        
-        int chunk      = (layer->tiles[(chunkX >> 7) + (chunkY << 8)] << 6) + ((chunkX & 0x7F) >> 4) + 8 * tileY;
-        int chunkXPos  = chunkX >> 7;
-        int chunkTileX = ((chunkX & 0x7F) >> 4) + 1;
-
-        for (int sx = -(chunkX & 0xF) + 16; sx < SCREEN_XSIZE; sx += 16) {
-                if (chunkTileX <= 7)
-                    chunk++;
-                else {
-                    chunkXPos++;
-                    if (chunkXPos >= layerwidth)
-                        chunkXPos = 0;
-                    chunkTileX = 0;
-                    chunk = (layer->tiles[chunkXPos + (chunkY << 8)] << 6) + 8 * tileY;
-                }
-
-                _3ds_prepTile(sx, sy, tiles128x128.gfxDataPos[chunk], tiles128x128.direction[chunk]);
-                chunkTileX++;
-        }
     }  
 #endif
 
 
     // Draw Above Water (if applicable)
-/*
-#if RETRO_USING_C2D
-    int drawableLines[2] = { SCREEN_YSIZE, 0 };
-#elif RETRO_RENDERTYPE == RETRO_SW_RENDER
+#if RETRO_RENDERTYPE == RETRO_SW_RENDER
     int drawableLines[2] = { waterDrawPos, SCREEN_YSIZE - waterDrawPos };
-#endif
-
     for (int i = 0; i < 2; ++i) {
-#if RETRO_USING_C2D
-	byte start = 0;
-#endif
         while (drawableLines[i]-- > 0) {
             activePalette = fullPalette[*lineBuffer];
             activePalette32 = fullPalette32[*lineBuffer];
             lineBuffer++;
             int chunkX = hParallax.tilePos[*scrollIndex];
-            //if (i == 0) {
-                //if (hParallax.deform[*scrollIndex])
-                    //chunkX += *deformationData;
-                //++deformationData;
-            //}
-            //else {
-            //    if (hParallax.deform[*scrollIndex])
-            //        chunkX += *deformationDataW;   // water
-	    //
-	    //
-            //        ++deformationDataW;
-            //}
-#if RETRO_RENDERTYPE == RETRO_SW_RENDER
+            if (i == 0) {
+                if (hParallax.deform[*scrollIndex])
+                    chunkX += *deformationData;
+                ++deformationData;
+            }
+            else {
+                if (hParallax.deform[*scrollIndex])
+                    chunkX += *deformationDataW;   // water
+	    
+	    
+                ++deformationDataW;
+            }
             ++scrollIndex;
-#elif RETRO_USING_C2D
-	    scrollIndex += 16;
-	    tileY++;
-#endif 
 
             int fullLayerwidth = layerwidth << 7;
             if (chunkX < 0)
@@ -844,22 +832,10 @@ void DrawHLineScrollLayer(int layerID)
             byte *gfxDataPtr  = NULL;
             int tilePxLineCnt = 0;
 
-#if RETRO_USING_C2D
-	    if (start == 0) {
-		    sy =  TILE_SIZE - tileY16;
-		    start = 1;
-
-		    //printf("Starting Y: %d\n", sy);
-	    }
-	    sx = tileXPxRemain - TILE_SIZE;
-#endif
-
-
             //Draw the first tile to the left
             if (tiles128x128.visualPlane[chunk] == (byte)aboveMidPoint) {
                 tilePxLineCnt = TILE_SIZE - tilePxXPos;
                 lineRemain -= tilePxLineCnt;
-#if RETRO_RENDERTYPE == RETRO_SW_RENDER
                 switch (tiles128x128.direction[chunk]) {
 		    case FLIP_NO:
                         gfxDataPtr    = &tilesetGFXData[tileOffsetY + tiles128x128.gfxDataPos[chunk] + tilePxXPos];
@@ -899,14 +875,6 @@ void DrawHLineScrollLayer(int layerID)
                         break;
                     default: break;
                 }
-#elif RETRO_USING_C2D
-		_3ds_prepTile(sx, sy, 
-				tiles128x128.gfxDataPos[chunk], 
-				tiles128x128.direction[chunk]);
-		frameBufferPtr += tileXPxRemain;
-		lineRemain -= tileXPxRemain;
-		sx += 16;
-#endif
             }
             else {
                 frameBufferPtr += tileXPxRemain;
@@ -930,7 +898,6 @@ void DrawHLineScrollLayer(int layerID)
 
                 // Loop Unrolling (faster but messier code)
                 if (tiles128x128.visualPlane[chunk] == (byte)aboveMidPoint) {
-#if RETRO_RENDERTYPE == RETRO_SW_RENDER
                     switch (tiles128x128.direction[chunk]) {
                         case FLIP_NO:
                             gfxDataPtr = &tilesetGFXData[tiles128x128.gfxDataPos[chunk] + tileOffsetY];
@@ -1201,14 +1168,6 @@ void DrawHLineScrollLayer(int layerID)
                             --gfxDataPtr;
                             break;
                     }
-#elif RETRO_USING_C2D
-			_3ds_prepTile(sx, sy, //+ tileY16 + tilePxYPos, 
-				tiles128x128.gfxDataPos[chunk],  
-				tiles128x128.direction[chunk]);
-			sx += 0x10;
-
-			frameBufferPtr += 0x10;
-#endif
                 }
                 else {
                     frameBufferPtr += 0x10;
@@ -1231,7 +1190,6 @@ void DrawHLineScrollLayer(int layerID)
                 tilePxLineCnt = lineRemain >= TILE_SIZE ? TILE_SIZE : lineRemain;
                 lineRemain -= tilePxLineCnt;
                 if (tiles128x128.visualPlane[chunk] == (byte)aboveMidPoint) {
-#if RETRO_RENDERTYPE == RETRO_SW_RENDER
                     switch (tiles128x128.direction[chunk]) {
                         case FLIP_NO:
                             gfxDataPtr = &tilesetGFXData[tiles128x128.gfxDataPos[chunk] + tileOffsetY];
@@ -1271,14 +1229,6 @@ void DrawHLineScrollLayer(int layerID)
                             break;
                         default: break;
                     }
-#elif RETRO_USING_C2D
-			_3ds_prepTile(sx, sy, 
-				(tiles128x128.gfxDataPos[chunk]),  
-				tiles128x128.direction[chunk]);
-			sx += 16;
-
-			frameBufferPtr += tilePxLineCnt;
-#endif
 
                 }
                 else {
@@ -1286,15 +1236,10 @@ void DrawHLineScrollLayer(int layerID)
                 }
             }
 
-#if RETRO_USING_C2D
-	    drawableLines[i] -= 15;
-	    sy += 16;
-#elif RETRO_RENDERTYPE == RETRO_SW_RENDER
             if (++tileY16 > TILE_SIZE - 1) {
                 tileY16 = 0;
                 ++tileY;
             }
-#endif
             if (tileY > 7) {
                 if (++chunkY == layerheight) {
                     chunkY = 0;
@@ -1306,7 +1251,7 @@ void DrawHLineScrollLayer(int layerID)
         }
 
     }
-*/
+#endif
 }
 void DrawVLineScrollLayer(int layerID)
 {
