@@ -748,18 +748,53 @@ void DrawHLineScrollLayer(int layerID)
     int chunkY        = tileYPos >> 7;
     int tileY         = (tileYPos & 0x7F) >> 4;
 
-    int sx = 0;
-    int sy = 0;
+#if RETRO_USING_C2D
+    for (int sy = TILE_SIZE - tileY16; sy < SCREEN_YSIZE; sy += 16) {
+        int chunkX = hParallax.tilePos[*scrollIndex];
+        int fullLayerWidth = layerwidth << 7;
+        chunkX %= fullLayerWidth;
 
-    // TODO: straight-out, just write your own renderer and stop trying
-    // to hijack the software renderer to output tiles
-    // The SW renderer operates on a per-scanline basis, but the HW renderer
-    // should operate on a per-tile basis
+        scrollIndex += 16;
+        tileY++;
+
+        if (tileY > 7) {
+            if (chunkY++ == layerheight) {
+                chunkY = 0;
+                scrollIndex -= 0x80 * layerheight;
+            }
+
+            tileY = 0;
+        }
+
+        // TODO: account for deformation data
+        
+        int chunk      = (layer->tiles[(chunkX >> 7) + (chunkY << 8)] << 6) + ((chunkX & 0x7F) >> 4) + 8 * tileY;
+        int chunkXPos  = chunkX >> 7;
+        int chunkTileX = ((chunkX & 0x7F) >> 4) + 1;
+
+        for (int sx = -(chunkX & 0xF) + 16; sx < SCREEN_XSIZE; sx += 16) {
+                if (chunkTileX <= 7)
+                    chunk++;
+                else {
+                    chunkXPos++;
+                    if (chunkXPos >= layerwidth)
+                        chunkXPos = 0;
+                    chunkTileX = 0;
+                    chunk = (layer->tiles[chunkXPos + (chunkY << 8)] << 6) + 8 * tileY;
+                }
+
+                _3ds_prepTile(sx, sy, tiles128x128.gfxDataPos[chunk], tiles128x128.direction[chunk]);
+                chunkTileX++;
+        }
+    }  
+#endif
+
 
     // Draw Above Water (if applicable)
+/*
 #if RETRO_USING_C2D
     int drawableLines[2] = { SCREEN_YSIZE, 0 };
-#elif RETRO_RENDERTYPE == RETRO-SW_RENDER
+#elif RETRO_RENDERTYPE == RETRO_SW_RENDER
     int drawableLines[2] = { waterDrawPos, SCREEN_YSIZE - waterDrawPos };
 #endif
 
@@ -775,20 +810,14 @@ void DrawHLineScrollLayer(int layerID)
             //if (i == 0) {
                 //if (hParallax.deform[*scrollIndex])
                     //chunkX += *deformationData;
-#if RETRO_USING_C2D
-		//deformationData += 16;
-#elif RETRO_RENDERTYPE == RETRO_SW_RENDER
                 //++deformationData;
-#endif
             //}
             //else {
             //    if (hParallax.deform[*scrollIndex])
             //        chunkX += *deformationDataW;   // water
-#if RETRO_USING_C2D
-		//deformationDataW += 16;
-#elif RETRO_RENDERTYPE == RETRO_SW_RENDER
-                //++deformationDataW;
-#endif
+	    //
+	    //
+            //        ++deformationDataW;
             //}
 #if RETRO_RENDERTYPE == RETRO_SW_RENDER
             ++scrollIndex;
@@ -820,7 +849,7 @@ void DrawHLineScrollLayer(int layerID)
 		    sy =  TILE_SIZE - tileY16;
 		    start = 1;
 
-		    printf("Starting Y: %d\n", sy);
+		    //printf("Starting Y: %d\n", sy);
 	    }
 	    sx = tileXPxRemain - TILE_SIZE;
 #endif
@@ -1277,6 +1306,7 @@ void DrawHLineScrollLayer(int layerID)
         }
 
     }
+*/
 }
 void DrawVLineScrollLayer(int layerID)
 {

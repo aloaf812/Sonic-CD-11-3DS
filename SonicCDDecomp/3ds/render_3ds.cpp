@@ -278,6 +278,10 @@ void _3ds_prepTile(int XPos, int YPos, int dataPos, int direction) {
 		return;
 	}
 
+	if (tileIndex >= TILES_MAX_3DS) {
+		printf("Tile limit hit!\n");
+	}
+
 	int tileX;
 	int tileY;
 
@@ -311,7 +315,7 @@ void _3ds_prepTile(int XPos, int YPos, int dataPos, int direction) {
 				break;
 			case FLIP_Y:
 				tile.params.pos.w = tileSize;
-				tile.params.pos.h = tileSize;
+				tile.params.pos.h = -tileSize;
 				break;
 			case FLIP_XY:
 				tile.params.pos.w = -tileSize;
