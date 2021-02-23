@@ -1,10 +1,10 @@
 #ifndef RENDER_3DS_H
 #define RENDER_3DS_H
 
-#define SPRITES_MAX 256
-#define TILES_MAX_3DS 16000
-#define TILE_MAXSIZE 6    	// arbitrary, but I'm banking on the number of colors cycled
-				// to be around this
+#define MAX_TILES_PER_LAYER   (26 * 16 * 6)    // 400x240 resolution -> 25x15 tiles onscreen per layer at once
+#define MAX_SPRITES_PER_LAYER (300)             // just guessing here lol
+
+#define TILE_MAXSIZE 6    	// also just guessing here lol
 
 typedef struct {
 	int sid;
@@ -24,8 +24,8 @@ typedef struct {
 	C2D_DrawParams params;
 } _3ds_tile;
 
-extern int spriteIndex;
-extern int tileIndex;
+extern int spriteIndex[7];
+extern int tileIndex[4];
 
 extern byte paletteIndex;
 extern byte cachedPalettes;
@@ -36,8 +36,8 @@ extern C3D_Tex      _3ds_textureData[SURFACE_MAX];
 extern C3D_Tex      _3ds_tilesetData[TILE_MAXSIZE];
 
 // cropped textures for sprites and tiles
-extern _3ds_sprite  _3ds_sprites[SPRITES_MAX];
-extern _3ds_tile    _3ds_tiles[TILES_MAX_3DS];
+extern _3ds_sprite  _3ds_sprites[7][MAX_SPRITES_PER_LAYER];
+extern _3ds_tile    _3ds_tiles[4][MAX_TILES_PER_LAYER];
 
 void _3ds_cacheSpriteSurface(int sheetID);
 void _3ds_delSpriteSurface(int sheetID);
@@ -53,10 +53,10 @@ inline void SWTilePosToHWTilePos(int sx, int sy, int* dx, int* dy) {
 
 inline void _3ds_prepSprite(int XPos, int YPos, int width, int height, 
 		     int sprX, int sprY, int sheetID, int direction,
-		     float scaleX, float scaleY, float angle) {
+		     float scaleX, float scaleY, float angle, int layer) {
     	// we don't actually draw the sprite immediately, we only 
     	// set up a sprite to be drawn next C2D_SceneBegin
-    	if (spriteIndex < SPRITES_MAX) {
+    	if (spriteIndex[layer] < MAX_SPRITES_PER_LAYER) {
 		_3ds_sprite spr;
 
 		// set up reference to texture
@@ -103,11 +103,12 @@ inline void _3ds_prepSprite(int XPos, int YPos, int width, int height,
 		spr.params.depth = 0;
 		spr.params.angle = angle;
 
-		_3ds_sprites[spriteIndex] = spr;
+		_3ds_sprites[layer][spriteIndex[layer]] = spr;
+                spriteIndex[layer]++;
     	}
 }
 
-inline void _3ds_prepTile(int XPos, int YPos, int dataPos, int direction) {
+inline void _3ds_prepTile(int XPos, int YPos, int dataPos, int direction, int layer) {
 	const int tileSize = 16;
 
 	// the original gif for tilesets is only 16x16384
@@ -117,25 +118,20 @@ inline void _3ds_prepTile(int XPos, int YPos, int dataPos, int direction) {
 		return;
 	}
 
-	if (tileIndex >= TILES_MAX_3DS) {
+	if (tileIndex[layer] >= MAX_TILES_PER_LAYER) {
 		printf("Tile limit hit!\n");
 	}
 
 	int tileX;
 	int tileY;
 
-	if (tileIndex < TILES_MAX_3DS) {
+	if (tileIndex[layer] < MAX_TILES_PER_LAYER) {
 		_3ds_tile tile;
 
 		//int ty = tileY;
 
 		// convert coordinates to work with the 3DS tile texture data
 		SWTilePosToHWTilePos(dataPos % 16, dataPos / 16, &tileX, &tileY);
-		//tileY = (tileY + 256) % 512;	// tile positions seem more accurate for some reason?
-
-		//printf("Original Y Pos: %d, X: %d, Y: %d\n", ogYPos, tileX, tileY);
-
-		//printf("Old y: %d, X: %d, Y: %d\n", ty, tileX, tileY);
 
 		tile.subtex.width  = 512;
 		tile.subtex.height = 512;
@@ -173,8 +169,8 @@ inline void _3ds_prepTile(int XPos, int YPos, int dataPos, int direction) {
 		tile.params.depth = 0;
 		tile.params.angle = 0;
 
-		_3ds_tiles[tileIndex] = tile;
-		tileIndex++;
+		_3ds_tiles[layer][tileIndex[layer]] = tile;
+		tileIndex[layer]++;
 	}
 }
 #endif
