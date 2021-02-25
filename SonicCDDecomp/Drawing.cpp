@@ -160,6 +160,7 @@ int InitRenderDevice()
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
     Engine.topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
+    clearColor = C2D_Color32f(0.0f, 0.0f, 0.0f, 1.0f);
 #elif RETRO_PLATFORM == RETRO_3DS && !RETRO_USING_C2D
     gfxInitDefault();
     DebugConsoleInit(); 
@@ -313,7 +314,11 @@ void RenderRenderDevice()
     SDL_RenderClear(Engine.renderer);
 #elif RETRO_USING_C2D
     C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-    C2D_TargetClear(Engine.topScreen, C2D_Color32f(0.0f, 0.0f, 0.0f, 1.0f));
+    if (clearScreen) {
+    	C2D_TargetClear(Engine.topScreen, clearColor);
+	clearScreen = 0;
+    }
+
     C2D_SceneBegin(Engine.topScreen);
 
     drawSpriteLayer(0);
@@ -327,6 +332,8 @@ void RenderRenderDevice()
     drawTileLayer(3);
     drawSpriteLayer(5);
     drawSpriteLayer(6);
+
+    C2D_DrawRectSolid(0, 0, 0, 50, 50, fadeColor);
 
     C3D_FrameEnd(0);
 #elif RETRO_PLATFORM == RETRO_3DS && !RETRO_USING_C2D
@@ -512,12 +519,34 @@ void GenerateBlendLookupTable(void)
 void ClearScreen(byte index)
 {
     ushort colour       = activePalette[index];
+
+#if RETRO_USING_C2D
+    // based on http://sheekgeek.org/2020/adamsheekgeek/rgb565-to-rgb888-color-conversion
+    // it seems to work correctly?
+    ushort vl = colour & 0b1111111100000000;
+    ushort vh = colour & 0b0000000011111111;
+
+    byte b5 = (byte) (vl & 0b00011111);
+    byte r5 = (byte) ((vh & 0b11111000) >> 3);
+
+    vl &= 0b11100000;
+    vh &= 0b00000111;
+
+    byte g5 = (byte) ((vl >> 5) | (vh << 3));
+
+    clearColor = C2D_Color32(r5 << 3, g5 << 2, b5 << 3, 255);
+    clearScreen  = 1;
+#endif
+
+#if RETRO_RENDERTYPE == RETRO_SW_RENDER
     ushort *framebuffer = Engine.frameBuffer;
     int cnt             = SCREEN_XSIZE * SCREEN_YSIZE;
+
     while (cnt--) {
         *framebuffer = colour;
         ++framebuffer;
     }
+#endif
 }
 
 void SetScreenSize(int width, int height)
@@ -2024,9 +2053,9 @@ void SetFadeHQ(int R, int G, int B, int A)
 #endif
 
 #if RETRO_USING_C2D
-
 #elif RETRO_RENDERTYPE == RETRO_HW_RENDER
     // TODO: this
+    // clearScreen  = 1;
 #endif 
 }
 

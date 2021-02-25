@@ -31,6 +31,10 @@ extern byte paletteIndex;
 extern byte cachedPalettes;
 extern byte maxPaletteCycles;
 
+extern u32 clearColor;
+extern u32 fadeColor;
+extern byte clearScreen;
+
 // actual texture data
 extern C3D_Tex      _3ds_textureData[SURFACE_MAX];
 extern C3D_Tex      _3ds_tilesetData[TILE_MAXSIZE];

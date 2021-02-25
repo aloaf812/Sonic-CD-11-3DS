@@ -16,6 +16,10 @@ byte paletteIndex = 0;
 byte cachedPalettes = 0;
 byte maxPaletteCycles = 0;
 
+u32 clearColor = 0;
+u32 fadeColor = 0;
+byte clearScreen = 0;
+
 /*
    JeffRuLz's texture handling code from OpenHCL was referenced heavily here
    swapPixel, powOfTwo, and swizzle were also directly lifted from its code
