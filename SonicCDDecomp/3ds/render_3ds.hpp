@@ -2,7 +2,8 @@
 #define RENDER_3DS_H
 
 #define MAX_TILES_PER_LAYER   (26 * 16 * 6)    // 400x240 resolution -> 25x15 tiles onscreen per layer at once
-#define MAX_SPRITES_PER_LAYER (300)             // just guessing here lol
+#define MAX_SPRITES_PER_LAYER (200)             // just guessing here lol
+#define MAX_RECT_PER_LAYER    (8)
 
 #define TILE_MAXSIZE 6    	// also just guessing here lol
 
@@ -24,8 +25,17 @@ typedef struct {
 	C2D_DrawParams params;
 } _3ds_tile;
 
+typedef struct {
+	ushort x;
+	ushort y;
+	ushort w;
+	ushort h;
+	u32 color;
+} _3ds_rectangle;
+
 extern int spriteIndex[7];
 extern int tileIndex[4];
+extern int rectIndex[7];
 
 extern byte paletteIndex;
 extern byte cachedPalettes;
@@ -40,8 +50,9 @@ extern C3D_Tex      _3ds_textureData[SURFACE_MAX];
 extern C3D_Tex      _3ds_tilesetData[TILE_MAXSIZE];
 
 // cropped textures for sprites and tiles
-extern _3ds_sprite  _3ds_sprites[7][MAX_SPRITES_PER_LAYER];
-extern _3ds_tile    _3ds_tiles[4][MAX_TILES_PER_LAYER];
+extern _3ds_sprite    _3ds_sprites[7][MAX_SPRITES_PER_LAYER];
+extern _3ds_tile      _3ds_tiles[4][MAX_TILES_PER_LAYER];
+extern _3ds_rectangle _3ds_rectangles[7][MAX_RECT_PER_LAYER];
 
 void _3ds_cacheSpriteSurface(int sheetID);
 void _3ds_delSpriteSurface(int sheetID);
@@ -175,6 +186,26 @@ inline void _3ds_prepTile(int XPos, int YPos, int dataPos, int direction, int la
 
 		_3ds_tiles[layer][tileIndex[layer]] = tile;
 		tileIndex[layer]++;
+	}
+}
+
+inline void _3ds_prepRect(int x, int y, int w, int h, int R, int G, int B, int A, int layer) {
+	if (layer >= 8) {
+		printf("Invalid layer: %d\n", layer);
+		return;
+	}
+
+	if (rectIndex[layer] < MAX_RECT_PER_LAYER) {
+		_3ds_rectangle rect;
+
+		rect.x = x;
+		rect.y = y;
+		rect.w = w;
+		rect.h = h;
+		rect.color = C2D_Color32(R, G, B, A);
+
+		_3ds_rectangles[layer][rectIndex[layer]] = rect;
+		rectIndex[layer]++;
 	}
 }
 #endif

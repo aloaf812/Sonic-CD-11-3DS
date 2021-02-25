@@ -59,6 +59,15 @@ static inline void drawSpriteLayer(int layer) {
     spriteIndex[layer] = 0;
 };
 
+static inline void drawSpriteLayerRect(int layer) {
+    for (int i = 0; i < rectIndex[layer]; i++) {
+	_3ds_rectangle r = _3ds_rectangles[layer][i];
+	C2D_DrawRectSolid(r.x, r.y, 0, r.w, r.h, r.color);
+    }
+
+    rectIndex[layer] = 0;
+}
+
 static inline void drawTileLayer(int layer) {
     for (int i = 0; i < tileIndex[layer]; i++) {
 	C2D_Sprite tile;
@@ -322,18 +331,23 @@ void RenderRenderDevice()
     C2D_SceneBegin(Engine.topScreen);
 
     drawSpriteLayer(0);
+    drawSpriteLayerRect(0);
     drawTileLayer(0);
     drawSpriteLayer(1);
+    drawSpriteLayerRect(1);
     drawTileLayer(1);
     drawSpriteLayer(2);
+    drawSpriteLayerRect(2);
     drawTileLayer(2);
     drawSpriteLayer(3);
+    drawSpriteLayerRect(3);
     drawSpriteLayer(4);
+    drawSpriteLayerRect(4);
     drawTileLayer(3);
     drawSpriteLayer(5);
+    drawSpriteLayerRect(5);
     drawSpriteLayer(6);
-
-    C2D_DrawRectSolid(0, 0, 0, 50, 50, fadeColor);
+    drawSpriteLayerRect(6);
 
     C3D_FrameEnd(0);
 #elif RETRO_PLATFORM == RETRO_3DS && !RETRO_USING_C2D
@@ -2010,7 +2024,7 @@ void DrawRectangle(int XPos, int YPos, int width, int height, int R, int G, int 
 #endif
 
 #if RETRO_USING_C2D
-
+    _3ds_prepRect(XPos, YPos, width, height, R, G, B, A, spriteLayerToDraw);
 #elif RETRO_RENDERTYPE == RETRO_HW_RENDER
     // TODO: this
 #endif

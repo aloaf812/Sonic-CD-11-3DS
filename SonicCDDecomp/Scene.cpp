@@ -420,7 +420,6 @@ void LoadStageFiles(void)
     yScrollA = (playerList[0].YPos >> 16) - SCREEN_SCROLL_UP;
     yScrollB                 = (playerList[0].YPos >> 16) - SCREEN_SCROLL_UP + SCREEN_YSIZE;
 #if RETRO_USING_C2D
-    printf("caching tileset...\n");
     _3ds_cacheTileSurface(tilesetGFXData);
 #endif
 

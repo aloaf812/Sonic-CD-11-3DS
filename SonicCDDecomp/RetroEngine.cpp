@@ -315,6 +315,9 @@ void RetroEngine::Run()
     while (running) {
         frameStart = SDL_GetTicks();
 #elif RETRO_PLATFORM == RETRO_3DS
+
+
+
     while (running && aptMainLoop()) {
 	frameStart = osGetTime(); //svcGetSystemTick();
 #endif
@@ -330,6 +333,9 @@ void RetroEngine::Run()
 				frameDelta = msPerFrame * 4;
 		}
 
+#if RETRO_USING_C2D
+	PrintStatistics();
+#endif
 //        if (frameDelta < 1000.0f / (float)refreshRate)
 //#if RETRO_USING_SDL
 //            SDL_Delay(1000.0f / (float)refreshRate - frameDelta);

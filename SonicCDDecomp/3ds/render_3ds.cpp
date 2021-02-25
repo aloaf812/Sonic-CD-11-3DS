@@ -5,12 +5,14 @@
 #define RGB565_to_RGBA5551(px) (BUILD_PIXEL_RGB5551( (px & 0xf800) >> 11, (px & 0x07e0) >> 6, (px & 0x001f)))
 
 int spriteIndex[7] = { 0 };
-int tileIndex[4]   = { 4 };
+int tileIndex[4]   = { 0 };
+int rectIndex[7]   = { 0 };
 
 C3D_Tex      _3ds_textureData[SURFACE_MAX];
 C3D_Tex      _3ds_tilesetData[TILE_MAXSIZE];
-_3ds_sprite  _3ds_sprites[7][MAX_SPRITES_PER_LAYER];
-_3ds_tile    _3ds_tiles[4][MAX_TILES_PER_LAYER];
+_3ds_sprite    _3ds_sprites[7][MAX_SPRITES_PER_LAYER];
+_3ds_tile      _3ds_tiles[4][MAX_TILES_PER_LAYER];
+_3ds_rectangle _3ds_rectangles[7][MAX_RECT_PER_LAYER];
 
 byte paletteIndex = 0;
 byte cachedPalettes = 0;
