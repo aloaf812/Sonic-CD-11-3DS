@@ -170,6 +170,7 @@ int InitRenderDevice()
     C2D_Prepare();
     Engine.topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
     clearColor = C2D_Color32f(0.0f, 0.0f, 0.0f, 1.0f);
+    ClearScreen(0);
 #elif RETRO_PLATFORM == RETRO_3DS && !RETRO_USING_C2D
     gfxInitDefault();
     DebugConsoleInit(); 
