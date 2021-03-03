@@ -49,24 +49,21 @@ static inline void CopyToFramebuffer() {
 static inline void drawSpriteLayer(int layer) {
     for (int i = 0; i < spriteIndex[layer]; i++) {
         C2D_Sprite spr;
-	spr.image.tex    = &_3ds_textureData[_3ds_sprites[layer][i].sid];
-	spr.image.subtex = &_3ds_sprites[layer][i].subtex;
-	spr.params       = _3ds_sprites[layer][i].params;
+	if (_3ds_sprites[layer][i].isRect) {
+            _3ds_rectangle r = _3ds_sprites[layer][i].rect;
+            C2D_DrawRectSolid(r.x, r.y, 0, r.w, r.h, r.color);
+	} else {
+	    spr.image.tex    = &_3ds_textureData[_3ds_sprites[layer][i].sid];
+	    spr.image.subtex = &_3ds_sprites[layer][i].subtex;
+	    spr.params       = _3ds_sprites[layer][i].params;
 
-        C2D_DrawSprite(&spr);
+
+            C2D_DrawSpriteTinted(&spr, &_3ds_sprites[layer][i].tint);
+	}
     }
 
     spriteIndex[layer] = 0;
 };
-
-static inline void drawSpriteLayerRect(int layer) {
-    for (int i = 0; i < rectIndex[layer]; i++) {
-	_3ds_rectangle r = _3ds_rectangles[layer][i];
-	C2D_DrawRectSolid(r.x, r.y, 0, r.w, r.h, r.color);
-    }
-
-    rectIndex[layer] = 0;
-}
 
 static inline void drawTileLayer(int layer) {
     for (int i = 0; i < tileIndex[layer]; i++) {
@@ -332,23 +329,16 @@ void RenderRenderDevice()
     C2D_SceneBegin(Engine.topScreen);
 
     drawSpriteLayer(0);
-    drawSpriteLayerRect(0);
     drawTileLayer(0);
     drawSpriteLayer(1);
-    drawSpriteLayerRect(1);
     drawTileLayer(1);
     drawSpriteLayer(2);
-    drawSpriteLayerRect(2);
     drawTileLayer(2);
     drawSpriteLayer(3);
-    drawSpriteLayerRect(3);
     drawSpriteLayer(4);
-    drawSpriteLayerRect(4);
     drawTileLayer(3);
     drawSpriteLayer(5);
-    drawSpriteLayerRect(5);
     drawSpriteLayer(6);
-    drawSpriteLayerRect(6);
 
     C3D_FrameEnd(0);
 #elif RETRO_PLATFORM == RETRO_3DS && !RETRO_USING_C2D
@@ -2260,7 +2250,7 @@ void DrawSprite(int XPos, int YPos, int width, int height, int sprX, int sprY, i
 #endif
 
 #if RETRO_USING_C2D
-    _3ds_prepSprite(XPos, YPos, width, height, sprX, sprY, sheetID, 0, 1.0f, 1.0f, 0.0f, spriteLayerToDraw);
+    _3ds_prepSprite(XPos, YPos, width, height, sprX, sprY, sheetID, 0, 1.0f, 1.0f, 0.0f, 255, spriteLayerToDraw);
 #elif RETRO_RENDERTYPE == RETRO_HW_RENDER
     // TODO: this
 #endif
@@ -2391,7 +2381,7 @@ void DrawSpriteFlipped(int XPos, int YPos, int width, int height, int sprX, int 
 #endif
 
 #if RETRO_USING_C2D
-    _3ds_prepSprite(XPos, YPos, width, height, sprX, sprY, sheetID, direction, 1.0f, 1.0f, 0.0f, spriteLayerToDraw);
+    _3ds_prepSprite(XPos, YPos, width, height, sprX, sprY, sheetID, direction, 1.0f, 1.0f, 0.0f, 255, spriteLayerToDraw);
 #elif RETRO_RENDERTYPE == RETRO_HW_RENDER
         // TODO: this
 #endif
@@ -2510,7 +2500,7 @@ void DrawSpriteScaled(int direction, int XPos, int YPos, int pivotX, int pivotY,
     int trueYPos      = YPos - (trueScaleY * pivotY >> 11);
 
     _3ds_prepSprite(trueXPos, trueYPos, width, height, sprX, sprY, sheetID, 0,
-		    finalScaleX, finalScaleY, 0.0f, spriteLayerToDraw); 
+		    finalScaleX, finalScaleY, 0.0f, 255, spriteLayerToDraw); 
 #elif RETRO_RENDERTYPE == RETRO_HW_RENDER
     // TODO: this
 #endif
@@ -2695,7 +2685,7 @@ void DrawSpriteRotated(int direction, int XPos, int YPos, int pivotX, int pivotY
 
     _3ds_prepSprite(trueXPos, trueYPos, 
 		    width, height, sprX, sprY, sheetID, direction,
-		    1.0f, 1.0f, radians, spriteLayerToDraw); 
+		    1.0f, 1.0f, radians, 255, spriteLayerToDraw); 
 #elif RETRO_RENDERTYPE == RETRO_HW_RENDER
     // TODO: this
 #endif
@@ -2978,7 +2968,7 @@ void DrawAlphaBlendedSprite(int XPos, int YPos, int width, int height, int sprX,
 #endif
 
 #if RETRO_USING_C2D
-
+    _3ds_prepSprite(XPos, YPos, width, height, sprX, sprY, sheetID, FLIP_NO, 1.0f, 1.0f, 0.0f, alpha, spriteLayerToDraw);
 #elif RETRO_RENDERTYPE == RETRO_HW_RENDER
     // TODO: this
 #endif
@@ -3051,7 +3041,8 @@ void DrawAdditiveBlendedSprite(int XPos, int YPos, int width, int height, int sp
 #endif
 
 #if RETRO_USING_C2D
-
+    // TODO: there's probably a proper way to do this, do that eventually
+    _3ds_prepSprite(XPos, YPos, width, height, sprX, sprY, sheetID, FLIP_NO, 1.0f, 1.0f, 0.0f, alpha, spriteLayerToDraw);
 #elif RETRO_RENDERTYPE == RETRO_HW_RENDER
     // TODO: this
 #endif
@@ -3117,7 +3108,8 @@ void DrawSubtractiveBlendedSprite(int XPos, int YPos, int width, int height, int
 #endif
 
 #if RETRO_USING_C2D
-
+    // TODO: same as additive blending
+    _3ds_prepSprite(XPos, YPos, width, height, sprX, sprY, sheetID, FLIP_NO, 1.0f, 1.0f, 0.0f, 255 - alpha, spriteLayerToDraw);
 #elif RETRO_RENDERTYPE == RETRO_HW_RENDER
     // TODO: this
 #endif

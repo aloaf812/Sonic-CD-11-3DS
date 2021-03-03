@@ -12,7 +12,6 @@ C3D_Tex      _3ds_textureData[SURFACE_MAX];
 C3D_Tex      _3ds_tilesetData[TILE_MAXSIZE];
 _3ds_sprite    _3ds_sprites[7][MAX_SPRITES_PER_LAYER];
 _3ds_tile      _3ds_tiles[4][MAX_TILES_PER_LAYER];
-_3ds_rectangle _3ds_rectangles[7][MAX_RECT_PER_LAYER];
 
 byte paletteIndex = 0;
 byte cachedPalettes = 0;
@@ -199,17 +198,6 @@ void _3ds_cacheGfxSurface(byte* gfxDataPtr, C3D_Tex* dst,
 
 	C3D_TexInit(dst, w, h, GPU_RGBA5551);
 	C3D_TexUpload(dst, buffer);
-
-	// write buffer to file
-	/*
-	if (write) {
-		FILE* f = fopen("/temp.buf", "w+");
-		fwrite(buffer, w * h * sizeof(s16), 1, f);
-		fclose(f);
-		printf("saved to temp.buf\n");
-	}
-	*/
-
 	linearFree(buffer);
 }
 
