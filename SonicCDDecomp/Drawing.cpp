@@ -2661,27 +2661,35 @@ void DrawSpriteRotated(int direction, int XPos, int YPos, int pivotX, int pivotY
     if (angle)
         angle = 0x200 - angle;
 
-    float w = width * cos(radians);
-    float h = height * cos(radians);
+    int sine = sinVal512[angle];
+    int cosine  = cosVal512[angle];
+    int a;
+    int b;
 
     switch (direction) {
 	case FLIP_X:
-		trueXPos = XPos - w + pivotX;
-		trueYPos = YPos - pivotY;
+		a = pivotX - width - 2;
+		b = height - pivotY + 2;
+                trueXPos = XPos + ((sine * (-pivotY - 2) + cosine * (pivotX - width - 2)) >> 9);;
+		trueYPos = YPos + ((cosine * (-pivotY - 2) - sine * (pivotX - width - 2)) >> 9);
 		break;
 	case FLIP_Y:
-		trueXPos = XPos - pivotX;
-		trueYPos = YPos - h + pivotY;
+		trueXPos =  XPos + ((sine * (-pivotY - 2) + cosine * (-pivotX - 2)) >> 9);
+		trueYPos = YPos + ((cosine * (-pivotY - 2) - sine * (-pivotX - 2)) >> 9);
 		break;
 	case FLIP_XY:
-		trueXPos = XPos - w  + pivotX;
-		trueYPos = YPos - h + pivotY;
-		break;
+		radians += M_PI;
+		if (radians > (2 * M_PI))
+			radians -= (2 * M_PI);
 	default:
-		trueXPos = XPos - pivotX;
-		trueYPos = YPos - pivotY;
+		trueXPos = XPos + ((sine * (-pivotY - 2) + cosine * (-pivotX - 2)) >> 9);
+		trueYPos = YPos + ((cosine * (-pivotY - 2) - sine * (-pivotX - 2)) >> 9);
 		break;
     };
+
+
+    //trueXPos += sin(radians) * height;
+    //trueYPos -= sin(radians) * width;
 
     _3ds_prepSprite(trueXPos, trueYPos, 
 		    width, height, sprX, sprY, sheetID, direction,

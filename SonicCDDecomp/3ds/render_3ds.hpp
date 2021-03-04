@@ -111,13 +111,13 @@ inline void _3ds_prepSprite(int XPos, int YPos, int width, int height,
 				break;
 		}
 
-		if (angle) {
-			spr.params.center.x = (spr.subtex.right - spr.subtex.left)   / 2;
-			spr.params.center.y = (spr.subtex.top   - spr.subtex.bottom) / 2;
-		} else {
+		//if (angle) {
+		//	spr.params.center.x = (spr.subtex.right - spr.subtex.left)   / 2;
+		//	spr.params.center.y = (spr.subtex.top   - spr.subtex.bottom) / 2;
+		//} else {
 			spr.params.center.x = 0.0f;
 			spr.params.center.y = 0.0f;
-		}
+		//}
 
 		spr.params.depth = 0;
 		spr.params.angle = angle;

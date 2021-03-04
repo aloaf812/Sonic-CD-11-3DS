@@ -246,6 +246,7 @@ enum RetroBytecodeFormat {
 #include <tremor/ivorbiscodec.h>
 #include <theora/theora.h>
 #include <theoraplay.h>
+#include <math.h>
 #if RETRO_USING_SDL1_AUDIO
 #include <SDL/SDL.h>
 #endif
