@@ -324,7 +324,7 @@ public:
     bool frameStep       = false;
 
     bool showPaletteOverlay = false;
-    bool useHQModes         = true;
+    bool useHQModes         = false;
 
     bool Init();
     void Run();

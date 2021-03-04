@@ -334,7 +334,9 @@ void RetroEngine::Run()
 		}
 
 #if RETRO_USING_C2D
-	PrintStatistics();
+        // only print when debugging features not enabled
+        if (!Engine.devMenu)
+	    PrintStatistics();
 #endif
 //        if (frameDelta < 1000.0f / (float)refreshRate)
 //#if RETRO_USING_SDL

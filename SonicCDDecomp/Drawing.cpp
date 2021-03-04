@@ -2899,6 +2899,9 @@ void DrawBlendedSprite(int XPos, int YPos, int width, int height, int sprX, int 
     // TODO: this
 #endif
 }
+
+// TODO:  Additive -> brighter, subtractive -> darker
+
 void DrawAlphaBlendedSprite(int XPos, int YPos, int width, int height, int sprX, int sprY, int alpha, int sheetID)
 {
 #if RETRO_RENDERTYPE == RETRO_SW_RENDER

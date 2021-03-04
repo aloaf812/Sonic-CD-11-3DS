@@ -156,7 +156,9 @@ inline void StopMusic()
     musicStatus = MUSIC_STOPPED;
     freeMusInfo();
 #if RETRO_PLATFORM == RETRO_3DS
-    for (byte i = 0; i < 24; i++) ndspChnWaveBufClear(i);
+    for (byte i = 0; i < 24; i++) 
+	while (ndspChnIsPlaying(i))
+            ndspChnWaveBufClear(i);
 #endif
 }
 

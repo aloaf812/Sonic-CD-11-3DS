@@ -161,6 +161,18 @@ void ProcessInput()
        else
            inputDevice[i].hold = false;
     }
+
+    // debugging features I should've enabled earlier
+    // I seriously need a better way of doing this but whatever
+    if (kDown & KEY_R) {
+        if (Engine.devMenu)
+            Engine.showPaletteOverlay = true;
+    }
+
+    if (kDown & KEY_SELECT) {
+        if (Engine.devMenu)
+            Engine.gameMode = ENGINE_INITDEVMENU;
+    }
 #elif RETRO_USING_SDL1
     if (SDL_NumJoysticks() > 0) {
         controller = SDL_JoystickOpen(0);
