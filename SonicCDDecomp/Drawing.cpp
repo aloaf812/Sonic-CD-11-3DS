@@ -2687,10 +2687,6 @@ void DrawSpriteRotated(int direction, int XPos, int YPos, int pivotX, int pivotY
 		break;
     };
 
-
-    //trueXPos += sin(radians) * height;
-    //trueYPos -= sin(radians) * width;
-
     _3ds_prepSprite(trueXPos, trueYPos, 
 		    width, height, sprX, sprY, sheetID, direction,
 		    1.0f, 1.0f, radians, 255, spriteLayerToDraw); 

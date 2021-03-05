@@ -166,7 +166,7 @@ void ProcessInput()
     // I seriously need a better way of doing this but whatever
     if (kDown & KEY_R) {
         if (Engine.devMenu)
-            Engine.showPaletteOverlay = true;
+            Engine.showPaletteOverlay = !Engine.showPaletteOverlay;
     }
 
     if (kDown & KEY_SELECT) {
