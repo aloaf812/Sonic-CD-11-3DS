@@ -2898,7 +2898,8 @@ void DrawBlendedSprite(int XPos, int YPos, int width, int height, int sprX, int 
 #endif
 
 #if RETRO_USING_C2D
-
+  // TODO: do this properly eventually
+  DrawAlphaBlendedSprite(XPos, YPos, width, height, sprX, sprY, 128, sheetID);
 #elif RETRO_RENDERTYPE == RETRO_HW_RENDER
     // TODO: this
 #endif
@@ -3354,7 +3355,8 @@ void DrawFace(void *v, uint colour)
 #endif
 
 #if RETRO_USING_C2D
-
+  // temporary measure to make main menu look cleaner.
+  clearScreen = 1;
 #elif RETRO_RENDERTYPE == RETRO_HW_RENDER
     // TODO: this
 #endif
