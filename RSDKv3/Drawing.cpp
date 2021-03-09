@@ -26,22 +26,17 @@ byte graphicData[GFXDATA_MAX];
 #if RETRO_PLATFORM == RETRO_3DS
 // implementation taken from here: https://gbatemp.net/threads/best-way-to-draw-pixel-buffer.445173/
 static inline void CopyToFramebuffer() {
-    u8* fb = gfxGetFramebuffer(GFX_TOP, GFX_LEFT, 0, 0);
-    ushort* tfb = new ushort[SCREEN_XSIZE * SCREEN_YSIZE]; 
+    u16* fb = (u16*) gfxGetFramebuffer(GFX_TOP, GFX_LEFT, 0, 0);
+    u16* pixels = (u16*) Engine.frameBuffer;
 
     // kinda assume that SCREEN_XSIZE = 400 and SCREEN_YSIZE = 240 here
     // framebuffer data is rotated 90 degrees internally
     const int screenSize = SCREEN_XSIZE * SCREEN_YSIZE;
     for (int y = 0; y < SCREEN_YSIZE; y++) {
         for (int x = 0; x < SCREEN_XSIZE; x++) {
-	    tfb[(x * SCREEN_YSIZE) + y] = 
-            Engine.frameBuffer[screenSize - (y * SCREEN_XSIZE) + x];
-
+            fb[((x * 240) + (240 - y - 1))] = *pixels++;
 	}
     }
-
-    memcpy(fb, tfb, 4 * 240 * 400);
-    delete tfb;
 }
 #endif
 
