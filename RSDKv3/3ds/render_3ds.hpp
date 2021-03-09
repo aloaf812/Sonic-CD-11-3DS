@@ -2,7 +2,7 @@
 #define RENDER_3DS_H
 
 #define MAX_TILES_PER_LAYER   (26 * 16 * 6)    // 400x240 resolution -> 25x15 tiles onscreen per layer at once
-#define MAX_SPRITES_PER_LAYER (100)             // just guessing here lol
+#define MAX_SPRITES_PER_LAYER (100)             // just guessing here lol (need higher limit for the dev menu?)
 
 #define TILE_MAXSIZE 6    	// also just guessing here lol
 
