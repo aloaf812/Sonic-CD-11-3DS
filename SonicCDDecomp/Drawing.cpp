@@ -52,7 +52,16 @@ static inline void drawSpriteLayer(int layer) {
 	if (_3ds_sprites[layer][i].isRect) {
             _3ds_rectangle r = _3ds_sprites[layer][i].rect;
             C2D_DrawRectSolid(r.x, r.y, 0, r.w, r.h, r.color);
-	} else {
+	} else if (_3ds_sprites[layer][i].isQuad) {
+	    _3ds_quad q = _3ds_sprites[layer][i].quad;
+	    // draw two triangles, ACD and ABD
+	    C2D_DrawTriangle(  q.vList[0].x, q.vList[0].y, q.color,
+			       q.vList[2].x, q.vList[2].y, q.color,
+			       q.vList[3].x, q.vList[3].y, q.color, 0  );
+	    C2D_DrawTriangle(  q.vList[0].x, q.vList[0].y, q.color,
+			       q.vList[1].x, q.vList[1].y, q.color,
+			       q.vList[3].x, q.vList[3].y, q.color, 0 );
+        } else {
 	    spr.image.tex    = &_3ds_textureData[_3ds_sprites[layer][i].sid];
 	    spr.image.subtex = &_3ds_sprites[layer][i].subtex;
 	    spr.params       = _3ds_sprites[layer][i].params;
@@ -3355,8 +3364,7 @@ void DrawFace(void *v, uint colour)
 #endif
 
 #if RETRO_USING_C2D
-  // temporary measure to make main menu look cleaner.
-  clearScreen = 1;
+  _3ds_prepQuad((Vertex*)v, colour, spriteLayerToDraw);
 #elif RETRO_RENDERTYPE == RETRO_HW_RENDER
     // TODO: this
 #endif

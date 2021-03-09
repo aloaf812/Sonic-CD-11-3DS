@@ -2,7 +2,7 @@
 #define RENDER_3DS_H
 
 #define MAX_TILES_PER_LAYER   (26 * 16 * 6)    // 400x240 resolution -> 25x15 tiles onscreen per layer at once
-#define MAX_SPRITES_PER_LAYER (200)             // just guessing here lol
+#define MAX_SPRITES_PER_LAYER (100)             // just guessing here lol
 
 #define TILE_MAXSIZE 6    	// also just guessing here lol
 
@@ -18,6 +18,15 @@ typedef struct {
 	ushort h;
 	u32 color;
 } _3ds_rectangle;
+
+typedef struct {
+	int x, y;
+} _3ds_vert;
+
+typedef struct {
+	_3ds_vert vList[4];
+	u32 color;
+} _3ds_quad;
 
 typedef struct {
 	int sid;
@@ -36,6 +45,9 @@ typedef struct {
 
 	byte isRect;
 	_3ds_rectangle rect;
+
+	byte isQuad;
+	_3ds_quad quad;
 } _3ds_sprite;
 
 extern int spriteIndex[7];
@@ -123,6 +135,7 @@ inline void _3ds_prepSprite(int XPos, int YPos, int width, int height,
 		spr.params.angle = angle;
 
 		spr.isRect = 0;
+		spr.isQuad = 0;
 
 		C2D_AlphaImageTint(&spr.tint, alpha / 255.0f);
 
@@ -207,11 +220,40 @@ inline void _3ds_prepRect(int x, int y, int w, int h, int R, int G, int B, int A
 		_3ds_sprite spr;
 
 		spr.isRect = 1;
+		spr.isQuad = 0;
 		spr.rect.x = x;
 		spr.rect.y = y;
 		spr.rect.w = w;
 		spr.rect.h = h;
 		spr.rect.color = C2D_Color32(R, G, B, A);
+
+		_3ds_sprites[layer][spriteIndex[layer]] = spr;
+		spriteIndex[layer]++;
+	}
+}
+
+inline void _3ds_prepQuad(Vertex* v, u32 color, int layer) {
+	if (layer >= 8) {
+		printf("Invaliud layer: %d\n", layer);
+		return;
+	}
+
+	if (spriteIndex[layer] < MAX_SPRITES_PER_LAYER) {
+		_3ds_sprite spr;
+
+		spr.isRect = 0;
+		spr.isQuad = 1;
+		spr.quad.vList[0].x = v[0].x;
+		spr.quad.vList[0].y = v[0].y;
+		spr.quad.vList[1].x = v[1].x;
+		spr.quad.vList[1].y = v[1].y;
+		spr.quad.vList[2].x = v[2].x;
+		spr.quad.vList[2].y = v[2].y;
+		spr.quad.vList[3].x = v[3].x;
+		spr.quad.vList[3].y = v[3].y;
+
+		// color is already RGBA8, we assume (not correct?)
+		spr.quad.color = color;
 
 		_3ds_sprites[layer][spriteIndex[layer]] = spr;
 		spriteIndex[layer]++;
