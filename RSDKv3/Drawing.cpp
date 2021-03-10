@@ -1880,7 +1880,7 @@ void Draw3DFloorLayer(int layerID)
     }
 #endif
 #if RETRO_USING_C2D
-
+    TileLayer* layer = &stageLayouts[activeTileLayers[layerID]];
 #elif RETRO_RENDERTYPE == RETRO_HW_RENDER
     // TODO: this
 #endif
@@ -2062,6 +2062,7 @@ void SetFadeHQ(int R, int G, int B, int A)
 #endif
 
 #if RETRO_USING_C2D
+    // unused in C2D renderer
 #elif RETRO_RENDERTYPE == RETRO_HW_RENDER
     // TODO: this
     // clearScreen  = 1;
@@ -2100,7 +2101,7 @@ void DrawTintRectangle(int XPos, int YPos, int width, int height)
 #endif
 
 #if RETRO_USING_C2D
-
+    // unused in C2D renderer
 #elif RETRO_RENDERTYPE == RETRO_HW_RENDER
     // TODO: this
 #endif
@@ -2205,7 +2206,7 @@ void DrawScaledTintMask(int direction, int XPos, int YPos, int pivotX, int pivot
 #endif
 
 #if RETRO_USING_C2D
-
+    // unused in C2D renderer
 #elif RETRO_RENDERTYPE == RETRO_HW_RENDER
     // TODO: this
 #endif
@@ -3490,7 +3491,8 @@ void DrawTexturedFace(void *v, byte sheetID)
 #endif
 
 #if RETRO_USING_C2D
-
+    // get rid of screen artifacting until I can implement this
+    clearScreen = 1;
 #elif RETRO_RENDERTYPE == RETRO_HW_RENDER
     // TODO: this
 #endif

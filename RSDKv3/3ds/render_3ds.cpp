@@ -1,4 +1,5 @@
 #include "../RetroEngine.hpp"
+#include "c2d_internal.h"
 
 // https://github.com/bubble2k16/snes9x_3ds/blob/3e5cdba3577aafefb0860966a3daf694ece8e168/source/pixform.h#L248
 #define BUILD_PIXEL_RGB5551(R,G,B) (((int) (R) << 11) | ((int) (G) << 6) | (int) ((B) << 1) | 1)
@@ -200,5 +201,4 @@ void _3ds_cacheGfxSurface(byte* gfxDataPtr, C3D_Tex* dst,
 	C3D_TexUpload(dst, buffer);
 	linearFree(buffer);
 }
-
 
