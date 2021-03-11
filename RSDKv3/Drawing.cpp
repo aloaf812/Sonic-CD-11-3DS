@@ -344,6 +344,7 @@ void RenderRenderDevice()
     drawSpriteLayer(5);
     drawSpriteLayer(6);
 
+
     C3D_FrameEnd(0);
 #elif RETRO_PLATFORM == RETRO_3DS && !RETRO_USING_C2D
     CopyToFramebuffer();
@@ -819,13 +820,24 @@ void DrawHLineScrollLayer(int layerID)
     int tileY         = (tileYPos & 0x7F) >> 4;
 
 #if RETRO_USING_C2D
+    clearScreen = 1;
     for (int sy = TILE_SIZE - tileY16 - 16; sy < SCREEN_YSIZE; sy += 16) {
         int chunkX = hParallax.tilePos[*scrollIndex];
         int fullLayerWidth = layerwidth << 7;
         chunkX %= fullLayerWidth;
 
         // TODO: account for deformation data (render parallax effects correctly)
-        
+        if (sy < waterDrawPos) {
+	    if (hParallax.deform[*scrollIndex])
+	        chunkX += *deformationData;
+	    ++deformationData;
+        }
+        else {
+	    if (hParallax.deform[*scrollIndex])
+	        chunkX += *deformationDataW;   // water
+	    ++deformationDataW;
+        }
+
         int chunk      = (layer->tiles[(chunkX >> 7) + (chunkY << 8)] << 6) + ((chunkX & 0x7F) >> 4) + 8 * tileY;
         int chunkXPos  = chunkX >> 7;
         int chunkTileX = ((chunkX & 0x7F) >> 4) + 1;
@@ -1880,7 +1892,7 @@ void Draw3DFloorLayer(int layerID)
     }
 #endif
 #if RETRO_USING_C2D
-    TileLayer* layer = &stageLayouts[activeTileLayers[layerID]];
+
 #elif RETRO_RENDERTYPE == RETRO_HW_RENDER
     // TODO: this
 #endif
