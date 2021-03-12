@@ -36,7 +36,7 @@ jobs:
           vcpkg integrate install
       - name: Build Sonic CD
         run: |
-          msbuild RSDKv3.sln /p:Configuration=Release /p:Platform=x86 /p:ForceImportBeforeCppTargets="$env:GITHUB_WORKSPACE/props/winactions.props"
+          msbuild RSDKv3.sln /p:Configuration=Release_SW /p:Platform=x86 /p:ForceImportBeforeCppTargets="$env:GITHUB_WORKSPACE/props/winactions.props"
       - name: Move artifacts
         run: |
           mkdir artifacts
@@ -76,7 +76,11 @@ jobs:
           vcpkg integrate install
       - name: Build Sonic CD
         run: |
+<<<<<<< HEAD
           msbuild RSDKv3.sln /p:Configuration=Release /p:Platform=x64 /p:ForceImportBeforeCppTargets="$env:GITHUB_WORKSPACE/props/winactions_x64.props"
+=======
+          msbuild RSDKv3.sln /p:Configuration=Release_SW /p:Platform=x64 /p:ForceImportBeforeCppTargets="$env:GITHUB_WORKSPACE/props/winactions_x64.props"
+>>>>>>> 94a204b339e270ea3e67201166401dbe7ccc2b99
       - name: Move artifacts
         run: |
           mkdir artifacts
@@ -107,9 +111,15 @@ jobs:
           Rename-Item ./dependencies/windows/libtheora-1.1.1 libtheora
       - name: Download GLEW
         run: |
+<<<<<<< HEAD
           Invoke-WebRequest -Uri "https://sourceforge.net/projects/glew/files/glew/2.1.0/glew-2.1.0.zip/download" -OutFile "GLEW.zip"
           Expand-Archive -Path GLEW.zip -DestinationPath ./dependencies/windows/
           Rename-Item ./dependencies/windows/glew-2.1.0-win32 glew
+=======
+          Invoke-WebRequest -Uri "https://github.com/nigels-com/glew/releases/download/glew-2.2.0/glew-2.2.0-win32.zip" -OutFile "GLEW.zip"
+          Expand-Archive -Path GLEW.zip -DestinationPath ./dependencies/windows/
+          Rename-Item ./dependencies/windows/glew-2.2.0 glew
+>>>>>>> 94a204b339e270ea3e67201166401dbe7ccc2b99
       - name: Download SDL2
         run: |
           Invoke-WebRequest -Uri "https://libsdl.org/release/SDL2-devel-2.0.14-VC.zip" -OutFile "SDL2.zip"
@@ -121,7 +131,11 @@ jobs:
           vcpkg integrate install
       - name: Build Sonic CD (HW render)
         run: |
+<<<<<<< HEAD
           msbuild RSDKv3.sln /p:Configuration=Release_HW /p:Platform=x86 /p:ForceImportBeforeCppTargets="$env:GITHUB_WORKSPACE/props/winactions.props"
+=======
+          msbuild RSDKv3.sln /p:Configuration=Release_HW /p:Platform=x86 /p:ForceImportBeforeCppTargets="$env:GITHUB_WORKSPACE/props/winactions_HW.props"
+>>>>>>> 94a204b339e270ea3e67201166401dbe7ccc2b99
       - name: Move artifacts
         run: |
           mkdir artifacts
@@ -152,9 +166,15 @@ jobs:
           Rename-Item ./dependencies/windows/libtheora-1.1.1 libtheora
       - name: Download GLEW
         run: |
+<<<<<<< HEAD
           Invoke-WebRequest -Uri "https://sourceforge.net/projects/glew/files/glew/2.1.0/glew-2.1.0.zip/download" -OutFile "GLEW.zip"
           Expand-Archive -Path GLEW.zip -DestinationPath ./dependencies/windows/
           Rename-Item ./dependencies/windows/glew-2.1.0-win32 glew
+=======
+          Invoke-WebRequest -Uri "https://github.com/nigels-com/glew/releases/download/glew-2.2.0/glew-2.2.0-win32.zip" -OutFile "GLEW.zip"
+          Expand-Archive -Path GLEW.zip -DestinationPath ./dependencies/windows/
+          Rename-Item ./dependencies/windows/glew-2.2.0 glew
+>>>>>>> 94a204b339e270ea3e67201166401dbe7ccc2b99
       - name: Download SDL2
         run: |
           Invoke-WebRequest -Uri "https://libsdl.org/release/SDL2-devel-2.0.14-VC.zip" -OutFile "SDL2.zip"
@@ -166,7 +186,11 @@ jobs:
           vcpkg integrate install
       - name: Build Sonic CD (HW render)
         run: |
+<<<<<<< HEAD
           msbuild RSDKv3.sln /p:Configuration=Release_HW /p:Platform=x64 /p:ForceImportBeforeCppTargets="$env:GITHUB_WORKSPACE/props/winactions_x64.props"
+=======
+          msbuild RSDKv3.sln /p:Configuration=Release_HW /p:Platform=x64 /p:ForceImportBeforeCppTargets="$env:GITHUB_WORKSPACE/props/winactions_x64_HW.props"
+>>>>>>> 94a204b339e270ea3e67201166401dbe7ccc2b99
       - name: Move artifacts
         run: |
           mkdir artifacts
@@ -193,37 +217,29 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: SonicCD-Linux
+<<<<<<< HEAD
           path: soniccd
 
   psvita:
     runs-on: ubuntu-latest
     container: vitasdk/vitasdk:latest
+=======
+          path: bin
+  
+  linux_HW:
+    runs-on: ubuntu-20.04
+>>>>>>> 94a204b339e270ea3e67201166401dbe7ccc2b99
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
       - name: Install dependencies
-        run: apk add --no-cache make cmake
-      - name: Get SDL2
         run: |
-          wget https://github.com/rsn8887/SDL-Vita/releases/download/2.0.8dev_vita_rsn8887_git_20180523/sdl2_vita_20180523.tar.xz
-          mkdir -p dependencies/vita/sdl2
-          tar -xf sdl2_vita_20180523.tar.xz -C dependencies/vita/sdl2
-      - name: Get and compile libtheora
-        run: |
-          wget https://downloads.xiph.org/releases/theora/libtheora-1.1.1.tar.bz2 && \
-          tar -xf libtheora-1.1.1.tar.bz2 -C dependencies/vita && \
-          mv dependencies/vita/libtheora-1.1.1 dependencies/vita/libtheora
-          cd dependencies/vita/libtheora
-          ./configure --host=arm-vita-eabi --prefix=${VITASDK}/arm-vita-eabi --disable-shared --enable-static --disable-spec --disable-examples
-          make install
+          sudo apt-get update
+          sudo apt-get install libtheora-dev libogg-dev libvorbis-dev libsdl2-dev libglew-dev
       - name: Build Sonic CD
-        run: |
-          cd SonicCD.Vita
-          cmake .
-          make
-      - name: Upload VPK
+        run: make USE_HW_REN=1
+      - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: SonicCD-vita
-          path: SonicCD.Vita/SonicCD.vpk
-          if-no-files-found: error
+          name: SonicCD-Linux_HW
+          path: bin

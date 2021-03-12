@@ -1,6 +1,5 @@
-# Sonic-CD-11-Decompilation
-A Full Decompilation of Sonic CD 2011, Based on the PC remake with improvements & tweaks from the mobile remakes
-
+# Retro Engine (RSDK) v3 Decompilation
+A Full Decompilation of RSDKv3 & Sonic CD 2011, Based on the PC remake with improvements & tweaks from the mobile remakes
 
 # **SUPPORT THE OFFICIAL RELEASE OF SONIC CD**
 + Without assets from the official release this decompilation will not run.
@@ -30,9 +29,6 @@ Even if your platform isn't supported by the official releases, you **must** buy
 * If `devMenu` is enabled in the config, pressing `F10` will activate a palette overlay that shows the game's 8 internal palettes in real time
 * If `useSteamDir` is set in the config, and the user is on Windows, the game will try to load savedata from Steam's `userdata` directory (where the Steam version saves to)
 
-# TODOs:
-* create a `cmakelists.txt` file for windows compiling so builds can be added automatically via git actions
-
 # How to build:
 ## Windows:
 * Clone the repo, then follow the instructions in the [depencencies readme for Windows](./dependencies/windows/dependencies.txt) to setup dependencies, then build via the Visual Studio solution
@@ -45,7 +41,7 @@ Even if your platform isn't supported by the official releases, you **must** buy
 
 * Download the newest version of the MSYS2 installer from [here](https://www.msys2.org/) and install it.
 * Run the MINGW64 prompt (from the windows Start Menu/MSYS2 64-bit/MSYS2 MinGW 64-bit), when the program starts enter `pacman -Syuu` in the prompt and hit Enter. Press `Y` when it asks if you want to update packages. If it asks you to close the prompt, do so, then restart it and run the same command again. This updates the packages to their latest versions.
-* Now install the dependencies with the following command: `pacman -S make git mingw-w64-x86_64-gcc mingw-w64-x86_64-SDL2 mingw-w64-x86_64-libogg mingw-w64-x86_64-libvorbis mingw-w64-x86_64-libtheora`
+* Now install the dependencies with the following command: `pacman -S pkg-config make git mingw-w64-x86_64-gcc mingw-w64-x86_64-SDL2 mingw-w64-x86_64-libogg mingw-w64-x86_64-libvorbis mingw-w64-x86_64-libtheora`
 * Clone the repo with the following command: `git clone https://github.com/Rubberduckycooly/Sonic-CD-11-Decompilation.git`
 * Go into the repo you just cloned with `cd Sonic-CD-11-Decompilation`
 * Then run `make CXXFLAGS=-O2 CXX=x86_64-w64-mingw32-g++ STATIC=1 -j5` (-j switch is optional but will make building faster, it's based on the number of cores you have +1 so 8 cores wold be -j9)
