@@ -111,7 +111,12 @@ inline void freeMusInfo()
         SDL_LockAudio();
 
         if (musInfo.buffer)
+#if RETRO_PLATFORM == RETRO_3DS
+	    linearFree(musInfo.buffer);
+#else
             delete[] musInfo.buffer;
+#endif
+
 #if RETRO_USING_SDL2
         if (musInfo.stream)
             SDL_FreeAudioStream(musInfo.stream);
@@ -141,7 +146,11 @@ inline void freeMusInfo()
         SDL_LockAudio();
 
         if (musInfo.buffer)
+#if RETRO_PLATFORM == RETRO_3DS
+            linearFree(musInfo.buffer);
+#else
             delete[] musInfo.buffer;
+#endif
         ov_clear(&musInfo.vorbisFile);
         musInfo.buffer    = nullptr;
         musInfo.trackLoop = false;

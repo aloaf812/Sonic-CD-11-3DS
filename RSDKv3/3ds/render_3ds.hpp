@@ -6,6 +6,8 @@
 
 #define TILE_MAXSIZE 6    	// also just guessing here lol
 
+#if RETRO_USING_C2D
+
 typedef struct {
 	Tex3DS_SubTexture subtex;
 	C2D_DrawParams params;
@@ -259,4 +261,5 @@ inline void _3ds_prepQuad(Vertex* v, u32 color, int layer) {
 		spriteIndex[layer]++;
 	}
 }
+#endif
 #endif

@@ -345,18 +345,15 @@ void RetroEngine::Run()
         if (!Engine.devMenu)
 	    PrintStatistics();
 #endif
-//        if (frameDelta < 1000.0f / (float)refreshRate)
-//#if RETRO_USING_SDL
-//            SDL_Delay(1000.0f / (float)refreshRate - frameDelta);
-//#elif RETRO_USING_C2D
-//	    svcSleepThread(1000.0f / (float)refreshRate - frameDelta);
-//#endif
 
-//#if RETRO_USING_SDL1 || RETRO_USING_SDL2
-//        frameEnd = SDL_GetTicks();
-//#elif RETRO_PLATFORM == RETRO_3DS
-//	frameEnd = osGetTime(); //svcGetSystemTick();
-//#endif
+#if RETRO_PLATFORM != RETRO_3DS
+        if (frameDelta < 1000.0f / (float)refreshRate)
+            SDL_Delay(1000.0f / (float)refreshRate - frameDelta);
+#endif
+
+#if (RETRO_USING_SDL1 || RETRO_USING_SDL2) && RETRO_PLATFORM != RETRO_3DS
+        frameEnd = SDL_GetTicks();
+#endif
 
         running = processEvents();
 

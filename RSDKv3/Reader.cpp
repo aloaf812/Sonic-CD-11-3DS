@@ -48,6 +48,9 @@ bool CheckRSDKFile(const char *filePath)
         return true;
     }
     else {
+#if RETRO_PLATFORM == RETRO_3DS
+	chdir(BASE_PATH);
+#endif
         Engine.usingDataFile = false;
         cFileHandle = NULL;
         if (LoadFile("Data/Scripts/ByteCode/GlobalCode.bin", &info)) {
@@ -556,6 +559,7 @@ bool LoadFile2(const char *filePath, FileInfo *fileInfo)
         fileInfo->cFileHandle = fOpen(rsdkName, "rb");
         fSeek(fileInfo->cFileHandle, 0, SEEK_END);
         fileInfo->fileSize       = (int)fTell(fileInfo->cFileHandle);
+	fileInfo->vFileSize      = fileInfo->fileSize;
         fileInfo->bufferPosition = 0;
         //readSize       = 0;
         fileInfo->readPos = 0;

@@ -533,6 +533,7 @@ void ClearScreen(byte index)
 #if RETRO_USING_C2D
     // based on http://sheekgeek.org/2020/adamsheekgeek/rgb565-to-rgb888-color-conversion
     // it seems to work correctly?
+    /*
     ushort vl = colour & 0b1111111100000000;
     ushort vh = colour & 0b0000000011111111;
 
@@ -546,6 +547,9 @@ void ClearScreen(byte index)
 
     clearColor = C2D_Color32(r5 << 3, g5 << 2, b5 << 3, 255);
     clearScreen  = 1;
+    */
+    clearColor = colour;
+    clearScreen = 1;
 #endif
 
 #if RETRO_RENDERTYPE == RETRO_SW_RENDER

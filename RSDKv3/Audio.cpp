@@ -22,6 +22,7 @@ ChannelInfo sfxChannels[CHANNEL_COUNT];
 MusicPlaybackInfo musInfo;
 
 int trackBuffer = -1;
+int readVorbisCallCounter = 0;
 
 #if RETRO_USING_SDL1_AUDIO || RETRO_USING_SDL2
 SDL_AudioSpec audioDeviceFormat;
@@ -186,6 +187,12 @@ void LoadGlobalSfx()
 #if RETRO_USING_SDL1_AUDIO || RETRO_USING_SDL2
 size_t readVorbis(void *mem, size_t size, size_t nmemb, void *ptr)
 {
+    // put some FLEX TAPE® on that audio read error
+    readVorbisCallCounter++;
+    if (readVorbisCallCounter > 100) {
+	    return 0;
+    }
+
     MusicPlaybackInfo *info = (MusicPlaybackInfo *)ptr;
     return FileRead2(&info->fileInfo, mem, (int)(size * nmemb));
 }
@@ -199,7 +206,7 @@ int seekVorbis(void *ptr, ogg_int64_t offset, int whence)
         default: break;
     }
     SetFilePosition2(&info->fileInfo, (int)(whence + offset));
-    return GetFilePosition2(&info->fileInfo) <= info->fileInfo.vFileSize;
+    return (int)(whence + offset) <= info->fileInfo.vFileSize;
 }
 long tellVorbis(void *ptr)
 {
@@ -215,8 +222,9 @@ int closeVorbis(void *ptr)
 
 void ProcessMusicStream(Sint32 *stream, size_t bytes_wanted)
 {
-    if (!musInfo.loaded)
+    if (!musInfo.loaded) {
         return;
+    }
     switch (musicStatus) {
         case MUSIC_READY:
         case MUSIC_PLAYING: {
@@ -257,13 +265,7 @@ void ProcessMusicStream(Sint32 *stream, size_t bytes_wanted)
             while (bytes_gotten < bytes_wanted) {
                 // We need more samples: get some
 #if RETRO_PLATFORM == RETRO_3DS
-		// admittedly kinda hacky, but the audio will just freeze after
-		// time traveling if we don't do this
-		if (musicStatus != MUSIC_PLAYING) {
-			ndspChnWaveBufClear(0);
-			return;
-		}
-
+		readVorbisCallCounter = 0;
 		long bytes_read = ov_read(&musInfo.vorbisFile, (char*)musInfo.buffer,
 				sizeof(musInfo.buffer) > (bytes_wanted - bytes_gotten) ? 
 					(bytes_wanted - bytes_gotten) : sizeof(musInfo.buffer),
@@ -276,6 +278,7 @@ void ProcessMusicStream(Sint32 *stream, size_t bytes_wanted)
 #endif
 
                 if (bytes_read == 0) {
+		    printLog("bruh you got no bytes\n");
                     // We've reached the end of the file
                     if (musInfo.trackLoop) {
                         ov_pcm_seek(&musInfo.vorbisFile, musInfo.loopPoint);
@@ -389,8 +392,11 @@ void ProcessAudioPlayback(void *userdata, Uint8 *stream, int len)
             musInfo.spec.freq     = (int)musInfo.vorbisFile.vi->rate;
 #endif
 
+#if RETRO_PLATFORM == RETRO_3DS
+	    musInfo.buffer = (s16*) linearAlloc(MIX_BUFFER_SAMPLES * sizeof(s16));
+#else
             musInfo.buffer = new Sint16[MIX_BUFFER_SAMPLES];
-
+#endif
 
             musicStatus  = MUSIC_PLAYING;
             masterVolume = MAX_VOLUME;
@@ -420,9 +426,7 @@ void ProcessAudioPlayback(void *userdata, Uint8 *stream, int len)
             const THEORAPLAY_AudioPacket *packet;
 
             while ((packet = THEORAPLAY_getAudio(videoDecoder)) != NULL) {
-		#if RETRO_USING_SDL
                 SDL_AudioStreamPut(ogv_stream, packet->samples, packet->frames * sizeof(float) * 2); // 2 for stereo
-		#endif
                 THEORAPLAY_freeAudio(packet);
             }
 
@@ -431,7 +435,6 @@ void ProcessAudioPlayback(void *userdata, Uint8 *stream, int len)
             // If we need more samples, assume we've reached the end of the file,
             // and flush the audio stream so we can get more. If we were wrong, and
             // there's still more file left, then there will be a gap in the audio. Sorry.
-            #if RETRO_USING_SDL
             if (SDL_AudioStreamAvailable(ogv_stream) < bytes_to_do)
                 SDL_AudioStreamFlush(ogv_stream);
 
@@ -441,13 +444,9 @@ void ProcessAudioPlayback(void *userdata, Uint8 *stream, int len)
             // Mix the converted audio data into the final output
             if (get != -1)
 	        ProcessAudioMixing(mix_buffer, buffer, get / sizeof(Sint16), MAX_VOLUME, 0);
-
-                            #endif
         }
         else {
-            #if RETRO_USING_SDL
             SDL_AudioStreamClear(ogv_stream); // Prevent leftover audio from playing at the start of the next video
-            #endif
         }
 #endif
 
@@ -613,6 +612,7 @@ void SetMusicTrack(char *filePath, byte trackID, bool loop, uint loopPoint)
     StrAdd(track->fileName, filePath);
     track->trackLoop = loop;
     track->loopPoint = loopPoint;
+    musicStatus = MUSIC_LOADING;
     UNLOCK_AUDIO_DEVICE()
 }
 bool PlayMusic(int track)
@@ -757,7 +757,6 @@ void SetSfxAttributes(int sfx, int loopCount, sbyte pan)
 {
     // we'll do this right eventually, but this is a hack
     // to get ring SFX to play, albeit without the stereo alternation
-    /*
     LOCK_AUDIO_DEVICE()
     int sfxChannel = -1;
     for (int i = 0; i < CHANNEL_COUNT; ++i) {
@@ -777,7 +776,6 @@ void SetSfxAttributes(int sfx, int loopCount, sbyte pan)
     sfxInfo->pan          = pan;
     sfxInfo->sfxID        = sfx;
     UNLOCK_AUDIO_DEVICE()
-    */
     PlaySfx(sfx, false);
 }
 
