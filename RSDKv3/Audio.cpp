@@ -189,7 +189,7 @@ size_t readVorbis(void *mem, size_t size, size_t nmemb, void *ptr)
 {
     // put some FLEX TAPE® on that audio read error
     readVorbisCallCounter++;
-    if (readVorbisCallCounter > 100) {
+    if (readVorbisCallCounter > 100 && musicStatus == MUSIC_PLAYING) {
 	    return 0;
     }
 
@@ -751,6 +751,13 @@ void PlaySfx(int sfx, bool loop)
 }
 void SetSfxAttributes(int sfx, int loopCount, sbyte pan)
 {
+    // this is commented out because of a very bizarre bug in Palmtree Panic Zone 3
+    // where the game will lock up in a very specific spot
+    //
+    // I have no idea why this happens, but I figure I'll leave this code commented
+    // out for the time being
+
+    /*
     // we'll do this right eventually, but this is a hack
     // to get ring SFX to play, albeit without the stereo alternation
     LOCK_AUDIO_DEVICE()
@@ -772,6 +779,7 @@ void SetSfxAttributes(int sfx, int loopCount, sbyte pan)
     sfxInfo->pan          = pan;
     sfxInfo->sfxID        = sfx;
     UNLOCK_AUDIO_DEVICE()
+    */
     PlaySfx(sfx, false);
 }
 
