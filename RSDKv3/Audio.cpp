@@ -392,11 +392,7 @@ void ProcessAudioPlayback(void *userdata, Uint8 *stream, int len)
             musInfo.spec.freq     = (int)musInfo.vorbisFile.vi->rate;
 #endif
 
-#if RETRO_PLATFORM == RETRO_3DS
-	    musInfo.buffer = (s16*) linearAlloc(MIX_BUFFER_SAMPLES * sizeof(s16));
-#else
             musInfo.buffer = new Sint16[MIX_BUFFER_SAMPLES];
-#endif
 
             musicStatus  = MUSIC_PLAYING;
             masterVolume = MAX_VOLUME;

@@ -14,7 +14,8 @@
 
 #else
 
-#if RETRO_USING_SDL2 || RETRO_USING_SDL1_AUDIO
+// maybe don't use SDL_RWops on 3DS
+#if RETRO_USING_SDL2
 #define FileIO                                          SDL_RWops
 #define fOpen(path, mode)                               SDL_RWFromFile(path, mode)
 #define fRead(buffer, elementSize, elementCount, file)  SDL_RWread(file, buffer, elementSize, elementCount)
