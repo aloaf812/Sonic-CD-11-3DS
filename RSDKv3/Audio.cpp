@@ -602,6 +602,7 @@ void ProcessAudioMixing(Sint32 *dst, const Sint16 *src, int len, int volume, sby
 
 void SetMusicTrack(char *filePath, byte trackID, bool loop, uint loopPoint)
 {
+    printLog("SetMusicTrack: %s\n", filePath);
     LOCK_AUDIO_DEVICE()
     TrackInfo *track = &musicTracks[trackID];
     StrCopy(track->fileName, "Data/Music/");
@@ -615,6 +616,8 @@ bool PlayMusic(int track)
 {
     if (!audioEnabled)
         return false;
+
+    printLog("PlayMusic: %d\n", track);
 
     LOCK_AUDIO_DEVICE()
     if (track < 0 || track >= TRACK_COUNT) {

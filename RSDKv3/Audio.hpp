@@ -159,13 +159,10 @@ void SetMusicTrack(char *filePath, byte trackID, bool loop, uint loopPoint);
 bool PlayMusic(int track);
 inline void StopMusic()
 {
+    SDL_LockAudio();
     musicStatus = MUSIC_STOPPED;
+    SDL_UnlockAudio();
     freeMusInfo();
-#if RETRO_PLATFORM == RETRO_3DS
-    for (byte i = 0; i < 24; i++) 
-	while (ndspChnIsPlaying(i))
-            ndspChnWaveBufClear(i);
-#endif
 }
 
 void LoadSfx(char *filePath, byte sfxID);
