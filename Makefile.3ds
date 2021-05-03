@@ -15,7 +15,7 @@ export COMMIT = $(shell git rev-parse --short HEAD)
 
 ARCH	     = -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 CFLAGS_ALL   = $(INCLUDE) $(ARCH) -DARM_ASM_CLIP15=1 -O2 -DARM11 -D_3DS  -D__3DS__ -DCOMMIT=\"$(COMMIT)\" -DFORCE_CASE_INSENSITIVE
-CXXFLAGS_ALL = $(CFLAGS_ALL) $(LIBS_ALL) -fno-rtti -std=gnu++11 -Idependencies/all/theoraplay
+CXXFLAGS_ALL = $(CFLAGS_ALL) $(LIBS_ALL) -fno-rtti -std=gnu++17 -Idependencies/all/theoraplay
 LDFLAGS	     = -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 LDFLAGS_ALL  = $(LDFLAGS)
 
