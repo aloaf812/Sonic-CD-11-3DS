@@ -1,5 +1,8 @@
+#if RETRO_USE_MOD_LOADER
 #include <string>
 #include <filesystem>
+#endif
+
 #include "RetroEngine.hpp"
 
 #if RETRO_PLATFORM == RETRO_WIN && _MSC_VER
@@ -599,6 +602,16 @@ void SetLeaderboard(int leaderboardID, int result)
 void initMods()
 {
 	/*
+    for (int i = 0; i < modCount; ++i) {
+        modList[i].fileMap.clear();
+        modList[i].name    = "";
+        modList[i].desc    = "";
+        modList[i].author  = "";
+        modList[i].version = "";
+        modList[i].folder  = "";
+        modList[i].active  = false;
+    }
+
     modCount        = 0;
     forceUseScripts = false;
 
@@ -616,7 +629,13 @@ void initMods()
                     ModInfo *info = &modList[modCount];
 
                     char modName[0x100];
-                    info->active = false;
+                    info->fileMap.clear();
+                    info->name    = "";
+                    info->desc    = "";
+                    info->author  = "";
+                    info->version = "";
+                    info->folder  = "";
+                    info->active  = false;
 
                     std::string modDir            = modDirPath.string().c_str();
                     const std::string mod_inifile = modDir + "/mod.ini";
@@ -749,3 +768,4 @@ void saveMods()
     }
     */
 }
+
