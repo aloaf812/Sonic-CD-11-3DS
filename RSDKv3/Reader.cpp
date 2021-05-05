@@ -1,6 +1,5 @@
 #include "RetroEngine.hpp"
 #include <string>
-#include <algorithm>
 
 char rsdkName[0x400];
 
@@ -99,8 +98,11 @@ bool LoadFile(const char *filePath, FileInfo *fileInfo)
     fileInfo->isMod = false;
     isModdedFile    = false;
     // Fixes ".ani" ".Ani" bug and any other case differences
-    std::string pathLower(filePathBuf);
-    std::transform(pathLower.begin(), pathLower.end(), pathLower.begin(), ::tolower);
+    char pathLower[0x100];
+    memset(pathLower, 0, sizeof(char) * 0x100);
+    for (int c = 0; c < strlen(filePathBuf); ++c) {
+        pathLower[c] = tolower(filePathBuf[c]);
+    }
 
     for (int m = 0; m < modCount; ++m) {
         if (modList[m].active) {
@@ -534,8 +536,11 @@ bool LoadFile2(const char *filePath, FileInfo *fileInfo)
     fileInfo->isMod = false;
     isModdedFile    = false;
     //Fixes ".ani" ".Ani" bug and any other case differences
-    std::string pathLower(filePathBuf);
-    std::transform(pathLower.begin(), pathLower.end(), pathLower.begin(), ::tolower);
+    char pathLower[0x100];
+    memset(pathLower, 0, sizeof(char) * 0x100);
+    for (int c = 0; c < strlen(filePathBuf); ++c) {
+        pathLower[c] = tolower(filePathBuf[c]);
+    }
 
     for (int m = 0; m < modCount; ++m) {
         if (modList[m].active) {
