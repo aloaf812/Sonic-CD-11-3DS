@@ -188,6 +188,10 @@ void InitUserdata()
         if (!ini->GetInteger("Window", "RefreshRate", &Engine.refreshRate))
             Engine.refreshRate = 60;
         #endif
+        if (!ini->GetInteger("Window", "DimLimit", &Engine.dimLimit))
+            Engine.dimLimit = 300; //5 mins
+        if (Engine.dimLimit >= 0)
+            Engine.dimLimit *= Engine.refreshRate;
 
         float bv = 0, sv = 0;
         if (!ini->GetFloat("Audio", "BGMVolume", &bv))
@@ -443,6 +447,7 @@ void writeSettings() {
 
     ini->SetFloat("Audio", "BGMVolume", bgmVolume / (float)MAX_VOLUME);
     ini->SetFloat("Audio", "SFXVolume", sfxVolume / (float)MAX_VOLUME);
+    ini->SetInteger("Window", "DimLimit", Engine.dimLimit >= 0 ? Engine.dimLimit / Engine.refreshRate : -1);
 #if RETRO_USING_SDL2
     ini->SetComment("Keyboard 1", "IK1Comment", "Keyboard Mappings for P1 (Based on: https://wiki.libsdl.org/SDL_Scancode)");
 #endif
