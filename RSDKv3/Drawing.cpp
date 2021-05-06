@@ -276,7 +276,7 @@ void RenderRenderDevice()
     SDL_Rect destScreenPos_scaled;
     SDL_Texture *texTarget = NULL;
     // allows me to disable it to prevent blur on resolutions that match only on 1 axis
-    bool tmpEnhancedScaling = Engine.enhancedScaling;
+    bool tmpEnhancedScaling = Engine.enhancedScaling || (Engine.bilinearVideo && Engine.gameMode == ENGINE_VIDEOWAIT);
     SDL_GetWindowSize(Engine.window, &Engine.windowXSize, &Engine.windowYSize);
     float screenxsize = SCREEN_XSIZE;
     float screenysize = SCREEN_YSIZE;

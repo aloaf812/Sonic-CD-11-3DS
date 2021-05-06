@@ -136,10 +136,15 @@ void InitUserdata()
         ini->SetInteger("Controller 1", "B", inputDevice[5].contMappings = SDL_CONTROLLER_BUTTON_B);
         ini->SetInteger("Controller 1", "C", inputDevice[6].contMappings = SDL_CONTROLLER_BUTTON_X);
         ini->SetInteger("Controller 1", "Start", inputDevice[7].contMappings = SDL_CONTROLLER_BUTTON_START);
+
+        ini->SetBool("Window", "EnhancedScaling", Engine.enhancedScaling = false);
+        ini->SetBool("Window", "BilinearVideoFilter", Engine.bilinearVideo = false);
+        ini->SetInteger("Window", "DimLimit", Engine.dimLimit = 300);
+        Engine.dimLimit *= Engine.refreshRate;
         #endif
 
         ini->Write(BASE_PATH"settings.ini");
-    }
+           }
     else {
         fClose(file);
 		delete[] ini;
@@ -181,6 +186,11 @@ void InitUserdata()
             Engine.vsync = false;
         if (!ini->GetBool("Window", "EnhancedScaling", &Engine.enhancedScaling))
             Engine.enhancedScaling = true;
+        if (!ini->GetInteger("Window", "WindowScale", &Engine.windowScale))
+        if (!ini->GetBool("Window", "EnhancedScaling", &Engine.enhancedScaling))
+            Engine.enhancedScaling = false;
+        if (!ini->GetBool("Window", "BilinearVideoFilter", &Engine.bilinearVideo))
+            Engine.bilinearVideo = false;
         if (!ini->GetInteger("Window", "WindowScale", &Engine.windowScale))
             Engine.windowScale = 2;
         if (!ini->GetInteger("Window", "ScreenWidth", &SCREEN_XSIZE))
@@ -425,10 +435,15 @@ void writeSettings() {
     ini->SetComment("Dev", "UseHQComment","Determines if applicable rendering modes (such as 3D floor from special stages) will render in \"High Quality\" mode or standard mode");
     ini->SetBool("Dev", "UseHQModes", Engine.useHQModes);
 
+    ini->SetComment("Dev", "DataFileComment", "Determines what RSDK file will be loaded");
+    ini->SetString("Dev", "DataFile", Engine.dataFile);
+
     ini->SetComment("Game", "LangComment", "Sets the game language (0 = EN, 1 = FR, 2 = IT, 3 = DE, 4 = ES, 5 = JP)");
     ini->SetInteger("Game", "Language", Engine.language);
     ini->SetComment("Game", "OGCtrlComment", "Sets the game's spindash style (-1 = let save file decide, 0 = S2, 1 = CD)");
     ini->SetInteger("Game", "OriginalControls", controlMode);
+    ini->SetComment("Game", "DTCtrlComment", "Determines if the game should hide the touch controls UI");
+    ini->SetBool("Game", "DisableTouchControls", disableTouchControls);
 
     ini->SetComment("Window", "FSComment", "Determines if the window will be fullscreen or not");
     ini->SetBool("Window", "FullScreen", Engine.startFullScreen);
@@ -436,18 +451,21 @@ void writeSettings() {
     ini->SetBool("Window", "Borderless", Engine.borderless);
     ini->SetComment("Window", "VSComment", "Determines if VSync will be active or not");
     ini->SetBool("Window", "VSync", Engine.vsync);
-    ini->SetComment("Window", "ESComment", "Determines if Enhanced Scaling will be active or not. Only affects non-multiple resolutions.");
+    ini->SetComment("Window", "ESComment", "Determines if Enhanced Scaling will be active or not (on everything). Only affects non-multiple resolutions.");
     ini->SetBool("Window", "EnhancedScaling", Engine.enhancedScaling);
+    ini->SetComment("Window", "BVComment", "Determines if Enhanced Scaling will be active or not (videos only, game will use above setting). Only affects non-multiple resolutions.");
+    ini->SetBool("Window", "BilinearVideoFilter", Engine.bilinearVideo);
     ini->SetComment("Window", "WSComment", "How big the window will be");
     ini->SetInteger("Window", "WindowScale", Engine.windowScale);
     ini->SetComment("Window", "SWComment", "How wide the base screen will be in pixels");
     ini->SetInteger("Window", "ScreenWidth", SCREEN_XSIZE);
     ini->SetComment("Window", "RRComment", "Determines the target FPS");
     ini->SetInteger("Window", "RefreshRate", Engine.refreshRate);
+    ini->SetComment("Window", "DLComment", "Determines the dim timer in seconds, set to -1 to disable dimming");
+    ini->SetInteger("Window", "DimLimit", Engine.dimLimit >= 0 ? Engine.dimLimit / Engine.refreshRate : -1);
 
     ini->SetFloat("Audio", "BGMVolume", bgmVolume / (float)MAX_VOLUME);
     ini->SetFloat("Audio", "SFXVolume", sfxVolume / (float)MAX_VOLUME);
-    ini->SetInteger("Window", "DimLimit", Engine.dimLimit >= 0 ? Engine.dimLimit / Engine.refreshRate : -1);
 #if RETRO_USING_SDL2
     ini->SetComment("Keyboard 1", "IK1Comment", "Keyboard Mappings for P1 (Based on: https://wiki.libsdl.org/SDL_Scancode)");
 #endif
