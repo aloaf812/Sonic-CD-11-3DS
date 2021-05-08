@@ -24,15 +24,21 @@ FileIO *cFileHandle = nullptr;
 bool CheckRSDKFile(const char *filePath)
 {
     FileInfo info;
+    
+    char filePathBuffer[0x100];
+    sprintf(filePathBuffer, "%s", filePath);
+#if RETRO_PLATFORM == RETRO_OSX
+    sprintf(filePathBuffer, "%s/%s", gamePath, filePath);
+#endif
 
     Engine.usingDataFile = false;
     Engine.usingDataFileStore = false;
     Engine.usingBytecode = false;
 
-    cFileHandle = fOpen(filePath, "rb");
+    cFileHandle = fOpen(filePathBuffer, "rb");
     if (cFileHandle) {
         Engine.usingDataFile = true;
-        StrCopy(rsdkName, filePath);
+        StrCopy(rsdkName, filePathBuffer);
         fClose(cFileHandle);
         cFileHandle = NULL;
         if (LoadFile("Data/Scripts/ByteCode/GlobalCode.bin", &info)) {
@@ -97,6 +103,7 @@ bool LoadFile(const char *filePath, FileInfo *fileInfo)
 
     fileInfo->isMod = false;
     isModdedFile    = false;
+    bool addPath = true;
     // Fixes ".ani" ".Ani" bug and any other case differences
     char pathLower[0x100];
     memset(pathLower, 0, sizeof(char) * 0x100);
@@ -113,6 +120,7 @@ bool LoadFile(const char *filePath, FileInfo *fileInfo)
                 Engine.usingDataFile = false;
                 fileInfo->isMod      = true;
                 isModdedFile         = true;
+                addPath = false;
                 break;
             }
         }
@@ -125,14 +133,23 @@ bool LoadFile(const char *filePath, FileInfo *fileInfo)
             Engine.usingDataFile = false;
             fileInfo->isMod      = true;
             isModdedFile         = true;
+            addPath = false;
             std::string fStr     = std::string(filePathBuf);
             fStr.erase(fStr.begin(), fStr.begin() + 5); // remove "Data/"
             StrCopy(filePathBuf, fStr.c_str());
         }
     }
-
-    StrCopy(fileInfo->fileName, filePathBuf);
-    StrCopy(fileName, filePathBuf);
+    
+#if RETRO_PLATFORM == RETRO_OSX
+    if (addPath) {
+        char pathBuf[0x100];
+        sprintf(pathBuf, "%s/%s", gamePath, filePathBuf);
+        sprintf(filePathBuf, "%s", pathBuf);
+    }
+#endif
+    
+    StrCopy(fileInfo->fileName, "");
+    StrCopy(fileName, "");
 
     if (Engine.usingDataFile && !Engine.forceFolder) {
         cFileHandle = fOpen(rsdkName, "rb");
@@ -141,10 +158,13 @@ bool LoadFile(const char *filePath, FileInfo *fileInfo)
         bufferPosition = 0;
         readSize       = 0;
         readPos        = 0;
+        
+        StrCopy(fileInfo->fileName, filePath);
+        StrCopy(fileName, filePath);
         if (!ParseVirtualFileSystem(fileInfo)) {
             fClose(cFileHandle);
             cFileHandle = NULL;
-            printLog("Couldn't load file '%s'", filePathBuf);
+            printLog("Couldn't load file '%s'", filePath);
             return false;
         }
         fileInfo->readPos           = readPos;
@@ -157,11 +177,16 @@ bool LoadFile(const char *filePath, FileInfo *fileInfo)
         fileInfo->bufferPosition    = bufferPosition;
     }
     else {
+        StrCopy(fileInfo->fileName, filePathBuf);
+        StrCopy(fileName, filePathBuf);
         cFileHandle = fOpen(fileInfo->fileName, "rb");
         if (!cFileHandle) {
             printLog("Couldn't load file '%s'", filePathBuf);
             return false;
         }
+        
+        StrCopy(fileInfo->fileName, filePathBuf);
+        StrCopy(fileName, filePathBuf);
         virtualFileOffset = 0;
         fSeek(cFileHandle, 0, SEEK_END);
         fileInfo->fileSize = (int)fTell(cFileHandle);
@@ -535,6 +560,7 @@ bool LoadFile2(const char *filePath, FileInfo *fileInfo)
 
     fileInfo->isMod = false;
     isModdedFile    = false;
+    bool addPath = true;
     //Fixes ".ani" ".Ani" bug and any other case differences
     char pathLower[0x100];
     memset(pathLower, 0, sizeof(char) * 0x100);
@@ -551,6 +577,7 @@ bool LoadFile2(const char *filePath, FileInfo *fileInfo)
                 Engine.usingDataFile = false;
                 fileInfo->isMod      = true;
                 isModdedFile         = true;
+                addPath = false;
                 break;
             }
         }
@@ -562,13 +589,22 @@ bool LoadFile2(const char *filePath, FileInfo *fileInfo)
             Engine.usingDataFile = false;
             fileInfo->isMod      = true;
             isModdedFile         = true;
+            addPath = false;
             std::string fStr     = std::string(filePathBuf);
             fStr.erase(fStr.begin(), fStr.begin() + 5); // remove "Data/"
             StrCopy(filePathBuf, fStr.c_str());
         }
     }
+    
+#if RETRO_PLATFORM == RETRO_OSX
+    if (addPath) {
+        char pathBuf[0x100];
+        sprintf(pathBuf, "%s/%s", gamePath, filePathBuf);
+        sprintf(filePathBuf, "%s", pathBuf);
+    }
+#endif
 
-    StrCopy(fileInfo->fileName, filePathBuf);
+    StrCopy(fileInfo->fileName, "");
 
     if (Engine.usingDataFile && !Engine.forceFolder) {
         fileInfo->cFileHandle = fOpen(rsdkName, "rb");
@@ -578,19 +614,22 @@ bool LoadFile2(const char *filePath, FileInfo *fileInfo)
         fileInfo->bufferPosition = 0;
         //readSize       = 0;
         fileInfo->readPos = 0;
+        StrCopy(fileInfo->fileName, filePath);
         if (!ParseVirtualFileSystem2(fileInfo)) {
             fClose(fileInfo->cFileHandle);
             fileInfo->cFileHandle = NULL;
-            printLog("Couldn't load file '%s'", filePathBuf);
+            printLog("Couldn't load file '%s'", filePath);
             return false;
         }
     }
     else {
+        StrCopy(fileInfo->fileName, filePathBuf);
         fileInfo->cFileHandle = fOpen(fileInfo->fileName, "rb");
         if (!fileInfo->cFileHandle) {
             printLog("Couldn't load file '%s'", filePathBuf);
             return false;
         }
+        StrCopy(fileInfo->fileName, filePathBuf);
         fSeek(fileInfo->cFileHandle, 0, SEEK_END);
         fileInfo->vFileSize = (int)fTell(fileInfo->cFileHandle);
         fileInfo->fileSize  = fileInfo->vFileSize;

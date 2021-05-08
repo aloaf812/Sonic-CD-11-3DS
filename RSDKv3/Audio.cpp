@@ -263,12 +263,12 @@ void ProcessMusicStream(Sint32 *stream, size_t bytes_wanted)
                     }
                 }
 
-                if (SDL_AudioStreamPut(musInfo.stream, musInfo.buffer, bytes_read) == -1)
+                if (SDL_AudioStreamPut(musInfo.stream, musInfo.buffer, (int)bytes_read) == -1)
                     return;
             }
 
             // Now that we know there are enough samples, read them and mix them
-            int bytes_done = SDL_AudioStreamGet(musInfo.stream, musInfo.buffer, bytes_wanted);
+            int bytes_done = SDL_AudioStreamGet(musInfo.stream, musInfo.buffer, (int)bytes_wanted);
             if (bytes_done == -1) {
                 return;
             }
@@ -379,7 +379,6 @@ void ProcessAudioPlayback(void *userdata, Uint8 *stream, int len)
             musInfo.loopPoint = trackPtr->loopPoint;
             musInfo.loaded    = true;
 
-            unsigned long long samples = 0;
             ov_callbacks callbacks;
 
 #if RETRO_USING_SDL1_AUDIO || RETRO_USING_SDL2
@@ -397,7 +396,7 @@ void ProcessAudioPlayback(void *userdata, Uint8 *stream, int len)
             musInfo.vorbisFile.vi = ov_info(&musInfo.vorbisFile, -1);
 
 #if RETRO_USING_SDL2
-            musInfo.stream = SDL_NewAudioStream(AUDIO_S16, musInfo.vorbisFile.vi->channels, musInfo.vorbisFile.vi->rate, audioDeviceFormat.format,
+            musInfo.stream = SDL_NewAudioStream(AUDIO_S16, musInfo.vorbisFile.vi->channels, (int)musInfo.vorbisFile.vi->rate, audioDeviceFormat.format,
                                                 audioDeviceFormat.channels, audioDeviceFormat.freq);
             if (!musInfo.stream) {
                 printLog("Failed to create stream: %s", SDL_GetError());
@@ -453,7 +452,7 @@ void ProcessAudioPlayback(void *userdata, Uint8 *stream, int len)
                 SDL_AudioStreamFlush(ogv_stream);
 
             // Fetch the converted audio data, which is ready for mixing.
-            int get = SDL_AudioStreamGet(ogv_stream, buffer, bytes_to_do);
+            int get = SDL_AudioStreamGet(ogv_stream, buffer, (int)bytes_to_do);
 
             // Mix the converted audio data into the final output
             if (get != -1)
@@ -553,6 +552,7 @@ void ProcessAudioPlayback(void *userdata, Uint8 *stream, int len)
 
 #if RETRO_USING_SDL1_AUDIO || RETRO_USING_SDL2
                 ProcessAudioMixing(mix_buffer, buffer, samples_done, sfxVolume, sfx->pan);
+
 #endif
             }
         }
