@@ -44,8 +44,10 @@ void initDevMenu()
     AddTextMenuEntry(&gameMenu[0], " ");
     AddTextMenuEntry(&gameMenu[0], "STAGE SELECT");
     AddTextMenuEntry(&gameMenu[0], " ");
+#if RETRO_USE_MOD_LOADER
     AddTextMenuEntry(&gameMenu[0], "MODS");
     AddTextMenuEntry(&gameMenu[0], " ");
+#endif
     AddTextMenuEntry(&gameMenu[0], "EXIT GAME");
     gameMenu[0].alignment        = 2;
     gameMenu[0].selectionCount   = 2;
@@ -149,10 +151,15 @@ void processStageSelect()
             if (keyPress.up)
                 gameMenu[0].selection2 -= 2;
 
-            if (gameMenu[0].selection2 > 15)
+            int count = 13;
+#if RETRO_USE_MOD_LOADER
+            count += 2;
+#endif
+
+            if (gameMenu[0].selection2 > count)
                 gameMenu[0].selection2 = 9;
             if (gameMenu[0].selection2 < 9)
-                gameMenu[0].selection2 = 15;
+                gameMenu[0].selection2 = count;
 
             DrawTextMenu(&gameMenu[0], SCREEN_CENTERX, 72);
             if (keyPress.start || keyPress.A) {
@@ -175,6 +182,7 @@ void processStageSelect()
                     gameMenu[1].selection1     = 0;
                     stageMode                  = DEVMENU_PLAYERSEL;
                 }
+#if RETRO_USE_MOD_LOADER
                 else if (gameMenu[0].selection2 == 13) {
                     SetupTextMenu(&gameMenu[0], 0);
                     AddTextMenuEntry(&gameMenu[0], "MOD LIST");
@@ -203,7 +211,8 @@ void processStageSelect()
                     gameMenu[1].visibleRowOffset = 0;
                     stageMode                  = DEVMENU_MODMENU;
                 }
-                else if (gameMenu[0].selection2 == 15) {
+#endif
+                else {
                     Engine.running = false;
                 }
             }
@@ -268,8 +277,10 @@ void processStageSelect()
                 AddTextMenuEntry(&gameMenu[0], " ");
                 AddTextMenuEntry(&gameMenu[0], "STAGE SELECT");
                 AddTextMenuEntry(&gameMenu[0], " ");
+#if RETRO_USE_MOD_LOADER
                 AddTextMenuEntry(&gameMenu[0], "MODS");
                 AddTextMenuEntry(&gameMenu[0], " ");
+#endif
                 AddTextMenuEntry(&gameMenu[0], "EXIT GAME");
                 gameMenu[0].alignment        = 2;
                 gameMenu[0].selectionCount   = 2;
@@ -444,8 +455,10 @@ void processStageSelect()
                 AddTextMenuEntry(&gameMenu[0], " ");
                 AddTextMenuEntry(&gameMenu[0], "STAGE SELECT");
                 AddTextMenuEntry(&gameMenu[0], " ");
+#if RETRO_USE_MOD_LOADER
                 AddTextMenuEntry(&gameMenu[0], "MODS");
                 AddTextMenuEntry(&gameMenu[0], " ");
+#endif
                 AddTextMenuEntry(&gameMenu[0], "EXIT GAME");
                 gameMenu[0].alignment        = 2;
                 gameMenu[0].selectionCount   = 2;
@@ -471,6 +484,7 @@ void processStageSelect()
             }
             break;
         }
+#if RETRO_USE_MOD_LOADER
         case DEVMENU_MODMENU: // Mod Menu
         {
             if (keyDown.down) {
@@ -567,7 +581,9 @@ void processStageSelect()
 
             DrawTextMenu(&gameMenu[0], SCREEN_CENTERX - 4, 40);
             DrawTextMenu(&gameMenu[1], SCREEN_CENTERX + 100, 64);
+            break;
         }
+#endif
         default: break;
     }
 #if RETRO_HARDWARE_RENDER && !RETRO_USING_C2D

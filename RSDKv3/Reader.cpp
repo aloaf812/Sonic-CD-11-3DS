@@ -17,7 +17,9 @@ byte eStringNo;
 byte eNybbleSwap;
 char encryptionStringA[] = { "4RaS9D7KaEbxcp2o5r6t" };
 char encryptionStringB[] = { "3tRaUxLmEaSn" };
+#if RETRO_USE_MOD_LOADER
 byte isModdedFile        = false;
+#endif
 
 FileIO *cFileHandle = nullptr;
 
@@ -101,8 +103,10 @@ bool LoadFile(const char *filePath, FileInfo *fileInfo)
 
     Engine.usingDataFileStore = Engine.usingDataFile;
 
+#if RETRO_USE_MOD_LOADER
     fileInfo->isMod = false;
     isModdedFile    = false;
+#endif
     bool addPath = true;
     // Fixes ".ani" ".Ani" bug and any other case differences
     char pathLower[0x100];
@@ -111,6 +115,7 @@ bool LoadFile(const char *filePath, FileInfo *fileInfo)
         pathLower[c] = tolower(filePathBuf[c]);
     }
 
+#if RETRO_USE_MOD_LOADER
     for (int m = 0; m < modCount; ++m) {
         if (modList[m].active) {
             std::map<std::string, std::string>::const_iterator iter = modList[m].fileMap.find(pathLower);
@@ -139,6 +144,7 @@ bool LoadFile(const char *filePath, FileInfo *fileInfo)
             StrCopy(filePathBuf, fStr.c_str());
         }
     }
+#endif
     
 #if RETRO_PLATFORM == RETRO_OSX
     if (addPath) {
@@ -442,14 +448,20 @@ void FileRead(void *dest, int size)
 void SetFileInfo(FileInfo *fileInfo)
 {
     Engine.forceFolder = false;
+#if RETRO_USE_MOD_LOADER
     if (!fileInfo->isMod) {
+#endif
         Engine.usingDataFile = Engine.usingDataFileStore;
+#if RETRO_USE_MOD_LOADER
     }
     else {
         Engine.forceFolder   = true;
     }
+#endif
 
+#if RETRO_USE_MOD_LOADER
     isModdedFile = fileInfo->isMod;
+#endif
     if (Engine.usingDataFile && !Engine.forceFolder) {
         cFileHandle       = fOpen(rsdkName, "rb");
         virtualFileOffset = fileInfo->virtualFileOffset;
@@ -558,8 +570,10 @@ bool LoadFile2(const char *filePath, FileInfo *fileInfo)
 
     Engine.usingDataFileStore = Engine.usingDataFile;
 
+#if RETRO_USE_MOD_LOADER
     fileInfo->isMod = false;
     isModdedFile    = false;
+#endif
     bool addPath = true;
     //Fixes ".ani" ".Ani" bug and any other case differences
     char pathLower[0x100];
@@ -568,6 +582,7 @@ bool LoadFile2(const char *filePath, FileInfo *fileInfo)
         pathLower[c] = tolower(filePathBuf[c]);
     }
 
+#if RETRO_USE_MOD_LOADER
     for (int m = 0; m < modCount; ++m) {
         if (modList[m].active) {
             std::map<std::string, std::string>::const_iterator iter = modList[m].fileMap.find(pathLower);
@@ -595,6 +610,7 @@ bool LoadFile2(const char *filePath, FileInfo *fileInfo)
             StrCopy(filePathBuf, fStr.c_str());
         }
     }
+#endif
     
 #if RETRO_PLATFORM == RETRO_OSX
     if (addPath) {

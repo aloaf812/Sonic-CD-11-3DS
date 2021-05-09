@@ -63,6 +63,7 @@ void PlayVideoFile(char *filePath)
         pathLower[c] = tolower(pathBuffer[c]);
     }
 
+#if RETRO_USE_MOD_LOADER
     for (int m = 0; m < modCount; ++m) {
         if (modList[m].active) {
             std::map<std::string, std::string>::const_iterator iter = modList[m].fileMap.find(pathLower);
@@ -75,6 +76,7 @@ void PlayVideoFile(char *filePath)
             }
         }
     }
+#endif
     
     char filepath[0x100];
     if (addPath) {
