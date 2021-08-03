@@ -13,7 +13,7 @@ volatile bool s_quit = false;
 Thread audioThreadID;
 
 // taken from Audio.cpp
-#if !RETRO_USING_SDL1_AUDIO
+#if !RETRO_USING_SDL1_AUDIO && !RETRO_USING_SDLMIXER
 size_t readVorbis(void *mem, size_t size, size_t nmemb, void *ptr)
 {
     MusicPlaybackInfo *info = (MusicPlaybackInfo *)ptr;

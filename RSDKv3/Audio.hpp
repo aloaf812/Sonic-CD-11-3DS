@@ -20,10 +20,21 @@
 
 #define MAX_VOLUME (100)
 
+#if RETRO_USING_SDLMIXER
+#define AUDIO_FREQUENCY (44100)
+#define AUDIO_FORMAT    (AUDIO_S16SYS) /**< Signed 16-bit samples */
+#define AUDIO_SAMPLES   (0x800)
+#define AUDIO_CHANNELS  (2)
+#endif
+
 struct TrackInfo {
     char fileName[0x40];
     bool trackLoop;
     uint loopPoint;
+
+#if RETRO_USING_SDLMIXER
+    Mix_Music* mus;
+#endif
 };
 
 struct MusicPlaybackInfo {
@@ -55,6 +66,10 @@ struct SFXInfo {
     Sint16 *buffer;
     size_t length;
     bool loaded;
+
+#if RETRO_USING_SDLMIXER
+    Mix_Chunk* chunk;
+#endif
 };
 
 struct ChannelInfo {
@@ -159,27 +174,44 @@ void SetMusicTrack(char *filePath, byte trackID, bool loop, uint loopPoint);
 bool PlayMusic(int track);
 inline void StopMusic()
 {
+#if RETRO_USING_SDLMIXER
+    Mix_HaltMusic();
+    musicStatus = MUSIC_STOPPED;
+    //Mix_FreeMusic(musicTracks[trackID].mus);
+    freeMusInfo();
+#else
     SDL_LockAudio();
     musicStatus = MUSIC_STOPPED;
     SDL_UnlockAudio();
     freeMusInfo();
+#endif
 }
 
 void LoadSfx(char *filePath, byte sfxID);
 void PlaySfx(int sfx, bool loop);
 inline void StopSfx(int sfx)
 {
+#if RETRO_USING_SDLMIXER
+    for (int i = 0; i < AUDIO_CHANNELS; i++) {
+	Mix_HaltChannel(i);
+    }
+#else
     for (int i = 0; i < CHANNEL_COUNT; ++i) {
         if (sfxChannels[i].sfxID == sfx) {
             MEM_ZERO(sfxChannels[i]);
             sfxChannels[i].sfxID = -1;
         }
     }
+#endif
 }
 void SetSfxAttributes(int sfx, int loopCount, sbyte pan);
 
 inline void SetMusicVolume(int volume)
 {
+#if RETRO_USING_SDLMIXER
+    Mix_VolumeMusic(volume / 2);
+#endif
+
     if (volume < 0)
         volume = 0;
     if (volume > MAX_VOLUME)
@@ -189,12 +221,20 @@ inline void SetMusicVolume(int volume)
 
 inline void PauseSound()
 {
+#if RETRO_USING_SDLMIXER
+	Mix_PauseMusic();
+#endif
+
     if (musicStatus == MUSIC_PLAYING)
         musicStatus = MUSIC_PAUSED;
 }
 
 inline void ResumeSound()
 {
+#if RETRO_USING_SDLMIXER
+    Mix_ResumeMusic();
+#endif
+
     if (musicStatus == MUSIC_PAUSED)
         musicStatus = MUSIC_PLAYING;
 }
@@ -209,6 +249,10 @@ inline void ReleaseGlobalSfx()
     StopAllSfx();
     for (int i = globalSFXCount - 1; i >= 0; --i) {
         if (sfxList[i].loaded) {
+#if RETRO_USING_SDLMIXER
+            Mix_FreeChunk(sfxList[i].chunk);
+#endif
+
             StrCopy(sfxList[i].name, "");
             free(sfxList[i].buffer);
             sfxList[i].length = 0;
@@ -221,6 +265,10 @@ inline void ReleaseStageSfx()
 {
     for (int i = stageSFXCount + globalSFXCount; i >= globalSFXCount; --i) {
         if (sfxList[i].loaded) {
+#if RETRO_USING_SDLMIXER
+	    Mix_FreeChunk(sfxList[i].chunk);
+#endif
+
             StrCopy(sfxList[i].name, "");
             free(sfxList[i].buffer);
             sfxList[i].length = 0;
