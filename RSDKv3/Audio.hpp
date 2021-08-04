@@ -208,15 +208,15 @@ void SetSfxAttributes(int sfx, int loopCount, sbyte pan);
 
 inline void SetMusicVolume(int volume)
 {
-#if RETRO_USING_SDLMIXER
-    Mix_VolumeMusic(volume / 2);
-#endif
-
     if (volume < 0)
         volume = 0;
     if (volume > MAX_VOLUME)
         volume = MAX_VOLUME;
     masterVolume = volume;
+
+#if RETRO_USING_SDLMIXER
+    Mix_VolumeMusic(volume / 2);
+#endif
 }
 
 inline void PauseSound()

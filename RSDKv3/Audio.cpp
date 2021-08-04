@@ -112,7 +112,7 @@ int InitAudioPlayback()
         return true;
     }
 #elif RETRO_USING_SDLMIXER
-   if (Mix_OpenAudio(AUDIO_FREQUENCY, AUDIO_FORMAT, AUDIO_CHANNELS, 1024) == -1) {
+   if (Mix_OpenAudio(AUDIO_FREQUENCY, AUDIO_FORMAT, 4, 1024) == -1) {
 	printLog("Unable to init SDL mixer: %s\n", Mix_GetError());
 	audioEnabled = false;
 	return true;
