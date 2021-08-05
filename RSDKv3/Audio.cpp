@@ -615,6 +615,16 @@ void ProcessAudioMixing(Sint32 *dst, const Sint16 *src, int len, int volume, sby
 
 void SetMusicTrack(char *filePath, byte trackID, bool loop, uint loopPoint)
 {
+#if RETRO_USING_SDLMIXER
+    char tempbuf[0xff];
+    StrCopy(tempbuf, "Data/Music/");
+    StrCopy(tempbuf, filePath);
+    if (StrComp(tempbuf, musicTracks[trackID].fileName)) {
+        printLog("%s already loaded, ignoring", tempbuf);
+	return;
+    }
+#endif
+
     printLog("SetMusicTrack: %s\n", filePath);
     LOCK_AUDIO_DEVICE()
     TrackInfo *track = &musicTracks[trackID];
@@ -623,6 +633,29 @@ void SetMusicTrack(char *filePath, byte trackID, bool loop, uint loopPoint)
     track->trackLoop = loop;
     track->loopPoint = loopPoint;
     musicStatus = MUSIC_LOADING;
+
+#if RETRO_USING_SDLMIXER
+    FileInfo info;
+    char fullPath[0x80];
+
+    StrCopy(fullPath, musicTracks[trackID].fileName);
+
+    if (LoadFile(fullPath, &info)) {
+        byte* mus = new byte[info.fileSize];
+        FileRead(mus, info.fileSize);
+        CloseFile();
+
+        SDL_RWops* src = SDL_RWFromMem(mus, info.fileSize);
+        if (src == NULL) {
+	    printLog("Unable to open music: %s", info.fileName);
+        } else {
+           musicTracks[trackID].mus  = Mix_LoadMUS_RW(src);
+           if (!musicTracks[trackID].mus) {
+	        printLog("Unable to read music: %s", info.fileName);
+           }
+        }
+    }
+#endif
     UNLOCK_AUDIO_DEVICE()
 }
 
@@ -644,33 +677,14 @@ bool PlayMusic(int track)
 
     printLog("PlayMusic: %d\n", track);
 #if RETRO_USING_SDLMIXER
-    FileInfo info;
-    char fullPath[0x80];
 
-    StrCopy(fullPath, musicTracks[track].fileName);
 
-    if (LoadFile(fullPath, &info)) {
-	byte* mus = new byte[info.fileSize];
-	FileRead(mus, info.fileSize);
-	CloseFile();
-
-        SDL_RWops* src = SDL_RWFromMem(mus, info.fileSize);
-	if (src == NULL) {
-	    printLog("Unable to open music: %s", info.fileName);
-	} else {
-	   musicTracks[track].mus  = Mix_LoadMUS_RW(src);
-	   if (!musicTracks[track].mus) {
-		printLog("Unable to read music: %s", info.fileName);
-	   }
-	}
-
-	Mix_HookMusicFinished(MixHook);
-	Mix_VolumeMusic(MAX_VOLUME);
-	Mix_PlayMusic(musicTracks[track].mus, 0);
-	musicStatus = MUSIC_PLAYING;
-	trackID = track;
-	trackBuffer = -1;
-    }
+    Mix_HookMusicFinished(MixHook);
+    Mix_VolumeMusic(MAX_VOLUME);
+    Mix_PlayMusic(musicTracks[track].mus, 0);
+    musicStatus = MUSIC_PLAYING;
+    trackID = track;
+    trackBuffer = -1;
 #elif RETRO_USING_SDL2 || RETRO_USING_SDL1_AUDIO
     
     LOCK_AUDIO_DEVICE()
