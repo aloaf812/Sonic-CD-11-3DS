@@ -224,7 +224,7 @@ void PlayVideo(const char* fileName) {
 			break;
 
 		C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-			C2D_TargetClear(top, C2D_Color32(20, 29, 31, 255));
+			C2D_TargetClear(top, C2D_Color32(0, 0, 0, 255));
 			C2D_SceneBegin(top);
 			if (isplaying && THEORA_HasVideo(&vidCtx))
 				frameDrawAtCentered(&frame, SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0.5f, 
