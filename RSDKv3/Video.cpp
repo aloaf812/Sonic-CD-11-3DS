@@ -44,7 +44,6 @@ static void videoClose(THEORAPLAY_Io *io)
 
 void PlayVideoFile(char *filePath)
 {
-    #if RETRO_USING_SDL
     char filepath[0x100];
     StrCopy(filepath, BASE_PATH "videos/");
 
@@ -58,7 +57,15 @@ void PlayVideoFile(char *filePath)
     StrAdd(filepath, ".ogv");
 
     FileIO *file = fOpen(filepath, "rb");
+#if RETRO_PLATFORM == RETRO_3DS
     if (file) {
+	CloseFile();
+        PlayVideo(filepath);
+    } else {
+        printLog("could not find %s, ignoring", filepath);
+    }
+#elif RETRO_USING_SDL
+       if (file) {
         printLog("Loaded File '%s'!", filepath);
 
         callbacks.read     = videoRead;
@@ -104,7 +111,7 @@ void PlayVideoFile(char *filePath)
     else {
         printLog("Couldn't find file '%s'!", filepath);
     }
-    #endif
+#endif
 }
 
 void UpdateVideoFrame()

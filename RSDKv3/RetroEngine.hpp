@@ -320,6 +320,7 @@ extern bool engineDebugMode;
 #include "3ds/debug_3ds.hpp"
 #include "3ds/audio_3ds.hpp"
 #include "3ds/render_3ds.hpp"
+#include "3ds/video_3ds.hpp"
 #endif
 
 class RetroEngine

@@ -150,7 +150,6 @@ void ProcessMusicStream();
 void ProcessAudioPlayback();
 void ProcessAudioMixing(Sint32 *dst, const Sint16 *src, int len, int volume, sbyte pan);
 
-
 inline void freeMusInfo()
 {
     if (musInfo.loaded) {
@@ -284,6 +283,10 @@ inline void ReleaseAudioDevice()
     StopAllSfx();
     ReleaseStageSfx();
     ReleaseGlobalSfx();
+
+#if RETRO_USING_SDLMIXER
+    Mix_CloseAudio();
+#endif
 }
 
 #endif // !AUDIO_H

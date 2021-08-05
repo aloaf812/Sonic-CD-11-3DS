@@ -14,7 +14,7 @@ export LIBPATHS	= $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 export COMMIT = $(shell git rev-parse --short HEAD)
 
 ARCH	     = -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
-CFLAGS_ALL   = $(INCLUDE) $(ARCH) -Wno-narrowing -O2 -DARM11 -D_3DS  -D__3DS__ -DCOMMIT=\"$(COMMIT)\"
+CFLAGS_ALL   = $(INCLUDE) $(ARCH) -fno-permissive -O2 -DARM11 -D_3DS  -D__3DS__ -DCOMMIT=\"$(COMMIT)\"
 CXXFLAGS_ALL = $(CFLAGS_ALL) $(LIBS_ALL) -fno-rtti -std=gnu++11 -Idependencies/all/theoraplay
 LDFLAGS	     = -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 LDFLAGS_ALL  = $(LDFLAGS)
@@ -35,6 +35,9 @@ SOURCES = dependencies/all/theoraplay/theoraplay.c \
 	  	RSDKv3/3ds/debug_3ds.cpp \
 		RSDKv3/3ds/audio_3ds.cpp \
 		RSDKv3/3ds/render_3ds.cpp \
+		RSDKv3/3ds/video_3ds.cpp \
+		RSDKv3/3ds/3ds-theoraplayer/source/video.c \
+		RSDKv3/3ds/3ds-theoraplayer/source/frame.c \
 		RSDKv3/Animation.cpp \
 		RSDKv3/Audio.cpp \
 		RSDKv3/Collision.cpp \
@@ -62,6 +65,9 @@ OBJS = $(BUILDDIR)/dependencies/all/theoraplay/theoraplay.c.o \
 	$(BUILDDIR)/RSDKv3/3ds/debug_3ds.cpp.o \
 	$(BUILDDIR)/RSDKv3/3ds/audio_3ds.cpp.o \
 	$(BUILDDIR)/RSDKv3/3ds/render_3ds.cpp.o \
+	$(BUILDDIR)/RSDKv3/3ds/video_3ds.cpp.o \
+	$(BUILDDIR)/RSDKv3/3ds/3ds-theoraplayer/source/video.c.o \
+	$(BUILDDIR)/RSDKv3/3ds/3ds-theoraplayer/source/frame.c.o \
 	$(BUILDDIR)/RSDKv3/Animation.cpp.o \
 	$(BUILDDIR)/RSDKv3/Audio.cpp.o \
 	$(BUILDDIR)/RSDKv3/Collision.cpp.o \

@@ -111,6 +111,7 @@ void ProcessStage(void)
 #if RETRO_USING_C2D
     _3ds_delTileSurface();
 #endif
+
             fadeMode = 0;
             SetActivePalette(0, 0, 256);
 

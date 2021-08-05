@@ -1,3 +1,6 @@
 [submodule "SonicCDDecomp/ghc"]
 	path = SonicCDDecomp/ghc
 	url = https://github.com/gulrak/filesystem
+[submodule "RSDKv3/3ds/3ds-theoraplayer"]
+	path = RSDKv3/3ds/3ds-theoraplayer
+	url = https://github.com/Oreo639/3ds-theoraplayer
