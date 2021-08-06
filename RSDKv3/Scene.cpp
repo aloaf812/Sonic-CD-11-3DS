@@ -112,6 +112,10 @@ void ProcessStage(void)
     _3ds_delTileSurface();
 #endif
 
+#if RETRO_USING_SDLMIXER
+    FreeAllMusic();
+#endif
+
             fadeMode = 0;
             SetActivePalette(0, 0, 256);
 

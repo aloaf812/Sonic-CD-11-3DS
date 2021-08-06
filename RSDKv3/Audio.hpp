@@ -186,6 +186,14 @@ inline void StopMusic()
 #endif
 }
 
+#if RETRO_USING_SDLMIXER
+inline void FreeAllMusic() {
+    for (int i = 0; i < TRACK_COUNT; i++)
+	if (musicTracks[i].mus)
+            Mix_FreeMusic(musicTracks[i].mus);
+}
+#endif
+
 void LoadSfx(char *filePath, byte sfxID);
 void PlaySfx(int sfx, bool loop);
 inline void StopSfx(int sfx)
