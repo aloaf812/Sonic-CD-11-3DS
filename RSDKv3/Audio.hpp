@@ -107,6 +107,13 @@ extern ChannelInfo sfxChannels[CHANNEL_COUNT];
 
 extern MusicPlaybackInfo musInfo;
 
+#if RETRO_USING_SDLMIXER
+extern byte* trackData[TRACK_COUNT];
+extern SDL_RWops* trackRwops[TRACK_COUNT];
+extern byte* sfxData[SFX_COUNT];
+extern SDL_RWops* sfxRwops[SFX_COUNT];
+#endif
+
 #if RETRO_USING_SDL1_AUDIO || RETRO_USING_SDL2
 extern SDL_AudioSpec audioDeviceFormat;
 #endif
@@ -156,6 +163,10 @@ inline void FreeAllMusic() {
 	if (musicTracks[i].mus) {
             Mix_FreeMusic(musicTracks[i].mus);
 	    musicTracks[i].mus = NULL;
+	    SDL_RWclose(trackRwops[i]);
+	    trackRwops[i] = NULL;
+	    free(trackData[i]);
+	    trackData[i] = NULL;
 	}
 }
 #endif
@@ -264,6 +275,11 @@ inline void ReleaseGlobalSfx()
         if (sfxList[i].loaded) {
 #if RETRO_USING_SDLMIXER
             Mix_FreeChunk(sfxList[i].chunk);
+	    sfxList[i].chunk = NULL;
+	    SDL_RWclose(sfxRwops[i]);
+	    sfxRwops[i] = NULL;
+	    free(sfxData[i]);
+	    sfxData[i] = NULL;
 #endif
 
             StrCopy(sfxList[i].name, "");
@@ -280,6 +296,12 @@ inline void ReleaseStageSfx()
         if (sfxList[i].loaded) {
 #if RETRO_USING_SDLMIXER
 	    Mix_FreeChunk(sfxList[i].chunk);
+            sfxList[i].chunk = NULL;
+	    SDL_RWclose(sfxRwops[i]);
+	    sfxRwops[i] = NULL;
+	    free(sfxData[i]);
+	    sfxData[i] = NULL;
+
 #endif
 
             StrCopy(sfxList[i].name, "");

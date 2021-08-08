@@ -29,6 +29,11 @@ int readVorbisCallCounter = 0;
 #define LOCK_AUDIO_DEVICE()   ;
 #define UNLOCK_AUDIO_DEVICE() ;
 
+byte* trackData[TRACK_COUNT];
+SDL_RWops* trackRwops[TRACK_COUNT];
+byte* sfxData[SFX_COUNT];
+SDL_RWops* sfxRwops[SFX_COUNT];
+
 #elif RETRO_USING_SDL1_AUDIO || RETRO_USING_SDL2
 SDL_AudioSpec audioDeviceFormat;
 
@@ -641,15 +646,15 @@ void SetMusicTrack(char *filePath, byte trackID, bool loop, uint loopPoint)
     StrCopy(fullPath, musicTracks[trackID].fileName);
 
     if (LoadFile(fullPath, &info)) {
-        byte* mus = new byte[info.fileSize];
-        FileRead(mus, info.fileSize);
+        trackData[trackID] = (byte*) malloc(info.fileSize * sizeof(byte));
+        FileRead(trackData[trackID], info.fileSize);
         CloseFile();
 
-        SDL_RWops* src = SDL_RWFromMem(mus, info.fileSize);
-        if (src == NULL) {
+        trackRwops[trackID] = SDL_RWFromMem(trackData[trackID], info.fileSize);
+        if (trackRwops[trackID] == NULL) {
 	    printLog("Unable to open music: %s", info.fileName);
         } else {
-           musicTracks[trackID].mus  = Mix_LoadMUS_RW(src);
+           musicTracks[trackID].mus  = Mix_LoadMUS_RW(trackRwops[trackID]);
            if (!musicTracks[trackID].mus) {
 	        printLog("Unable to read music: %s", info.fileName);
            }
@@ -717,16 +722,16 @@ void LoadSfx(char *filePath, byte sfxID)
     StrAdd(fullPath, filePath);
 
     if (LoadFile(fullPath, &info)) {
-        byte *sfx = new byte[info.fileSize];
-        FileRead(sfx, info.fileSize);
-        CloseFile();
-
 #if RETRO_USING_SDLMIXER
-        SDL_RWops *src = SDL_RWFromMem(sfx, info.fileSize);
-	if (src == NULL) {
+	sfxData[sfxID] = (byte*) malloc(info.fileSize * sizeof(byte));
+	FileRead(sfxData[sfxID], info.fileSize);
+	CloseFile();
+
+        sfxRwops[sfxID] = SDL_RWFromMem(sfxData[sfxID], info.fileSize);
+	if (sfxRwops[sfxID] == NULL) {
 	    printLog("Unable to open sfx: %s", info.fileName);
 	} else {
-	    sfxList[sfxID].chunk = Mix_LoadWAV_RW(src, 1);
+	    sfxList[sfxID].chunk = Mix_LoadWAV_RW(sfxRwops[sfxID], 1);
 	    if (!sfxList[sfxID].chunk) {
 		printLog("Unable to read sfx: %s", info.fileName);
 	    } else {
@@ -735,6 +740,10 @@ void LoadSfx(char *filePath, byte sfxID)
 	    }
 	}
 #elif RETRO_USING_SDL1_AUDIO || RETRO_USING_SDL2
+        byte *sfx = new byte[info.fileSize];
+        FileRead(sfx, info.fileSize);
+        CloseFile();
+
         SDL_LockAudio();
         SDL_RWops *src = SDL_RWFromMem(sfx, info.fileSize);
         if (src == NULL) {
