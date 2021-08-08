@@ -150,6 +150,17 @@ void ProcessMusicStream();
 void ProcessAudioPlayback();
 void ProcessAudioMixing(Sint32 *dst, const Sint16 *src, int len, int volume, sbyte pan);
 
+#if RETRO_USING_SDLMIXER
+inline void FreeAllMusic() {
+    for (int i = 0; i < TRACK_COUNT; i++)
+	if (musicTracks[i].mus) {
+            Mix_FreeMusic(musicTracks[i].mus);
+	    musicTracks[i].mus = NULL;
+	}
+}
+#endif
+
+
 inline void freeMusInfo()
 {
     if (musInfo.loaded) {
@@ -166,6 +177,10 @@ inline void freeMusInfo()
 
         SDL_UnlockAudio();
     }
+
+#if RETRO_USING_SDLMIXER
+    FreeAllMusic();
+#endif
 }
 #endif
 
@@ -185,15 +200,6 @@ inline void StopMusic()
     freeMusInfo();
 #endif
 }
-
-#if RETRO_USING_SDLMIXER
-inline void FreeAllMusic() {
-    for (int i = 0; i < TRACK_COUNT; i++)
-	if (musicTracks[i].mus)
-            Mix_FreeMusic(musicTracks[i].mus);
-}
-#endif
-
 void LoadSfx(char *filePath, byte sfxID);
 void PlaySfx(int sfx, bool loop);
 inline void StopSfx(int sfx)
