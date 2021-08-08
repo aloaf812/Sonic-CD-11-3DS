@@ -680,11 +680,12 @@ bool PlayMusic(int track)
 
 
     Mix_HookMusicFinished(MixHook);
-    Mix_VolumeMusic(MAX_VOLUME);
+    Mix_VolumeMusic(128);
     Mix_PlayMusic(musicTracks[track].mus, 0);
     musicStatus = MUSIC_PLAYING;
     trackID = track;
     trackBuffer = -1;
+    masterVolume = MAX_VOLUME;
 #elif RETRO_USING_SDL2 || RETRO_USING_SDL1_AUDIO
     
     LOCK_AUDIO_DEVICE()

@@ -222,7 +222,7 @@ inline void SetMusicVolume(int volume)
     masterVolume = volume;
 
 #if RETRO_USING_SDLMIXER
-    Mix_VolumeMusic(volume / 2);
+    Mix_VolumeMusic((int) volume * 1.28);
 #endif
 }
 
