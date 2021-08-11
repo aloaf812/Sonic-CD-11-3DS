@@ -38,6 +38,7 @@ SOURCES = dependencies/all/theoraplay/theoraplay.c \
 		RSDKv3/3ds/video_3ds.cpp \
 		RSDKv3/3ds/3ds-theoraplayer/source/video.c \
 		RSDKv3/3ds/3ds-theoraplayer/source/frame.c \
+		RSDKv3/fcaseopen.c \
 		RSDKv3/Animation.cpp \
 		RSDKv3/Audio.cpp \
 		RSDKv3/Collision.cpp \
@@ -68,6 +69,7 @@ OBJS = $(BUILDDIR)/dependencies/all/theoraplay/theoraplay.c.o \
 	$(BUILDDIR)/RSDKv3/3ds/video_3ds.cpp.o \
 	$(BUILDDIR)/RSDKv3/3ds/3ds-theoraplayer/source/video.c.o \
 	$(BUILDDIR)/RSDKv3/3ds/3ds-theoraplayer/source/frame.c.o \
+	$(BUILDDIR)/RSDKv3/fcaseopen.c.o \
 	$(BUILDDIR)/RSDKv3/Animation.cpp.o \
 	$(BUILDDIR)/RSDKv3/Audio.cpp.o \
 	$(BUILDDIR)/RSDKv3/Collision.cpp.o \

@@ -103,6 +103,7 @@ typedef unsigned int uint;
 #define RETRO_USING_C2D        (1)
 #define RETRO_USING_SDL1_AUDIO (0)
 #define RETRO_USING_SDLMIXER   (1)
+#define FORCE_CASE_INSENSITIVE (1)
 #else // Since its an else & not an elif these platforms probably aren't supported yet
 #define RETRO_USING_SDL2       (0)
 #define RETRO_USING_SDL1       (0)

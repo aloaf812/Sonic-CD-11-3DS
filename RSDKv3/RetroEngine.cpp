@@ -274,6 +274,7 @@ bool RetroEngine::Init()
     strcat(dest, "\\");
     strcat(dest, Engine.dataFile);
 #else
+    /*
     if (!CheckRSDKFile(BASE_PATH "Data.rsdk")) {
 	    printf("Error: RSDK file not found.\n"
 	           "Make sure you have the Data.rsdk\n"
@@ -281,6 +282,8 @@ bool RetroEngine::Init()
 		   "Sonic CD at /3ds/SonicCD\n");
 	    return false;
     }
+    */
+    CheckRSDKFile(BASE_PATH "Data.rsdk");
     InitUserdata();
 #endif
     gameMode = ENGINE_EXITGAME;
