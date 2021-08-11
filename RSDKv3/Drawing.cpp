@@ -25,9 +25,9 @@ byte graphicData[GFXDATA_MAX];
 
 #if RETRO_PLATFORM == RETRO_3DS
 // implementation taken from here: https://gbatemp.net/threads/best-way-to-draw-pixel-buffer.445173/
-static inline void CopyToFramebuffer() {
+static inline void CopyToFramebuffer(u16* buffer) {
     u16* fb = (u16*) gfxGetFramebuffer(GFX_TOP, GFX_LEFT, 0, 0);
-    u16* pixels = (u16*) Engine.frameBuffer;
+    u16* pixels = buffer;
 
     // kinda assume that SCREEN_XSIZE = 400 and SCREEN_YSIZE = 240 here
     // framebuffer data is rotated 90 degrees internally
@@ -41,7 +41,11 @@ static inline void CopyToFramebuffer() {
 #endif
 
 #if RETRO_USING_C2D
-static inline void drawSpriteLayer(int layer) {
+static int stereoOffset[7] = {
+	16, 12, 8, 6, 4, 2, 0
+};
+
+static inline void drawSpriteLayer(int layer, bool rightScreen) {
     for (int i = 0; i < spriteIndex[layer]; i++) {
         C2D_Sprite spr;
 	if (_3ds_sprites[layer][i].isRect) {
@@ -49,37 +53,47 @@ static inline void drawSpriteLayer(int layer) {
             C2D_DrawRectSolid(r.x, r.y, 0, r.w, r.h, r.color);
 	} else if (_3ds_sprites[layer][i].isQuad) {
 	    _3ds_quad q = _3ds_sprites[layer][i].quad;
+	    int offset = rightScreen ? (int) (osGet3DSliderState() * stereoOffset[layer]) : 0;
 	    // draw two triangles, ACD and ABD
-	    C2D_DrawTriangle(  q.vList[0].x, q.vList[0].y, q.color,
-			       q.vList[2].x, q.vList[2].y, q.color,
-			       q.vList[3].x, q.vList[3].y, q.color, 0  );
-	    C2D_DrawTriangle(  q.vList[0].x, q.vList[0].y, q.color,
-			       q.vList[1].x, q.vList[1].y, q.color,
-			       q.vList[3].x, q.vList[3].y, q.color, 0 );
+	    C2D_DrawTriangle(  q.vList[0].x + offset, q.vList[0].y, q.color,
+			       q.vList[2].x + offset, q.vList[2].y, q.color,
+			       q.vList[3].x + offset, q.vList[3].y, q.color, 0  );
+	    C2D_DrawTriangle(  q.vList[0].x + offset, q.vList[0].y, q.color,
+			       q.vList[1].x + offset, q.vList[1].y, q.color,
+			       q.vList[3].x + offset, q.vList[3].y, q.color, 0 );
         } else {
 	    spr.image.tex    = &_3ds_textureData[_3ds_sprites[layer][i].sid];
 	    spr.image.subtex = &_3ds_sprites[layer][i].subtex;
 	    spr.params       = _3ds_sprites[layer][i].params;
 
+	    if (rightScreen) {
+	        spr.params.pos.x += (int) (osGet3DSliderState() * stereoOffset[layer]);
+	    }
 
             C2D_DrawSpriteTinted(&spr, &_3ds_sprites[layer][i].tint);
 	}
     }
 
-    spriteIndex[layer] = 0;
+    if (rightScreen)
+        spriteIndex[layer] = 0;
 };
 
-static inline void drawTileLayer(int layer) {
+static inline void drawTileLayer(int layer, bool rightScreen) {
     for (int i = 0; i < tileIndex[layer]; i++) {
 	C2D_Sprite tile;
 	tile.image.tex = &_3ds_tilesetData[paletteIndex];
 	tile.image.subtex = &_3ds_tiles[layer][i].subtex;
 	tile.params = _3ds_tiles[layer][i].params;
 
+	if (rightScreen) {
+            tile.params.pos.x += (int) (osGet3DSliderState() * stereoOffset[layer]);
+	}
+
 	C2D_DrawSprite(&tile);
     }
 
-    tileIndex[layer] = 0;
+    if (rightScreen)
+        tileIndex[layer] = 0;
 }
 #endif
 
@@ -167,9 +181,11 @@ int InitRenderDevice()
     gfxInitDefault();
     DebugConsoleInit();
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
-    C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
+    C2D_Init(C2D_DEFAULT_MAX_OBJECTS * 2);
     C2D_Prepare();
+    gfxSet3D(true);
     Engine.topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
+    Engine.rightScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_RIGHT);
     clearColor = C2D_Color32f(0.0f, 0.0f, 0.0f, 1.0f);
     ClearScreen(0);
 #elif RETRO_PLATFORM == RETRO_3DS && !RETRO_USING_C2D
@@ -334,25 +350,40 @@ void RenderRenderDevice()
         C3D_FrameEnd(0);
     } else {
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+
+        C2D_SceneBegin(Engine.topScreen);
         if (clearScreen) {
     	    C2D_TargetClear(Engine.topScreen, clearColor);
+        }
+        drawSpriteLayer(0, false);
+        drawTileLayer(0, false);
+        drawSpriteLayer(1, false);
+        drawTileLayer(1, false);
+        drawSpriteLayer(2, false);
+        drawTileLayer(2, false);
+        drawSpriteLayer(3, false);
+        drawSpriteLayer(4, false);
+        drawTileLayer(3, false);
+        drawSpriteLayer(5, false);
+        drawSpriteLayer(6, false);
+
+	C2D_SceneBegin(Engine.rightScreen);
+        if (clearScreen) {
+    	    C2D_TargetClear(Engine.rightScreen, clearColor);
 	    clearScreen = 0;
         }
 
-        C2D_SceneBegin(Engine.topScreen);
-
-        drawSpriteLayer(0);
-        drawTileLayer(0);
-        drawSpriteLayer(1);
-        drawTileLayer(1);
-        drawSpriteLayer(2);
-        drawTileLayer(2);
-        drawSpriteLayer(3);
-        drawSpriteLayer(4);
-        drawTileLayer(3);
-        drawSpriteLayer(5);
-        drawSpriteLayer(6);
-
+        drawSpriteLayer(0, true);
+        drawTileLayer(0, true);
+        drawSpriteLayer(1, true);
+        drawTileLayer(1, true);
+        drawSpriteLayer(2, true);
+        drawTileLayer(2, true);
+        drawSpriteLayer(3, true);
+        drawSpriteLayer(4, true);
+        drawTileLayer(3, true);
+        drawSpriteLayer(5, true);
+        drawSpriteLayer(6, true);
 
         C3D_FrameEnd(0);
     }
@@ -366,7 +397,7 @@ void RenderRenderDevice()
 						scaleframe, scaleframe);
         C3D_FrameEnd(0);
     } else {
-        CopyToFramebuffer();
+        CopyToFramebuffer((u16*) Engine.frameBuffer);
         gfxFlushBuffers();
         gfxSwapBuffers();
         gspWaitForVBlank();
@@ -1922,20 +1953,21 @@ void Draw3DFloorLayer(int layerID)
 }
 void Draw3DSkyLayer(int layerID)
 {
-#if RETRO_RENDERTYPE == RETRO_SW_RENDER
     TileLayer *layer = &stageLayouts[activeTileLayers[layerID]];
     int layerWidth          = layer->width << 7;
     int layerHeight         = layer->height << 7;
     int layerYPos           = layer->YPos;
     int sinValue            = sinM[layer->angle & 0x1FF];
     int cosValue            = cosM[layer->angle & 0x1FF];
+    int layerXPos           = layer->XPos >> 4;
+    int layerZPos           = layer->ZPos >> 4;
+#if RETRO_RENDERTYPE == RETRO_SW_RENDER
     ushort *frameBufferPtr  = &Engine.frameBuffer[((SCREEN_YSIZE / 2) + 12) * SCREEN_XSIZE];
     ushort *bufferPtr       = Engine.frameBuffer2x;
     if (!drawStageGFXHQ)
         bufferPtr = &Engine.frameBuffer[((SCREEN_YSIZE / 2) + 12) * SCREEN_XSIZE];
     byte *linePtr           = &gfxLineBuffer[((SCREEN_YSIZE / 2) + 12)];
-    int layerXPos           = layer->XPos >> 4;
-    int layerZPos           = layer->ZPos >> 4;
+
     for (int i = TILE_SIZE / 2; i < SCREEN_YSIZE - TILE_SIZE; ++i) {
         if (!(i & 1)) {
             activePalette   = fullPalette[*linePtr];
@@ -1996,7 +2028,31 @@ void Draw3DSkyLayer(int layerID)
 #endif
 
 #if RETRO_USING_C2D
+    int sx = 0, sy = 0;
+    for (int i = 0; i < SCREEN_YSIZE; i += 16) {
+        int xBuffer    = layerYPos / (i << 8) * -cosValue >> 9;
+        int yBuffer    = sinValue * (layerYPos / (i << 8)) >> 9;
+        int XPos       = layerXPos + (3 * sinValue * (layerYPos / (i << 8)) >> 2) - xBuffer * SCREEN_XSIZE;
+        int YPos       = layerZPos + (3 * cosValue * (layerYPos / (i << 8)) >> 2) - yBuffer * SCREEN_XSIZE;
+        int lineBuffer = 0;
 
+	sx = 0;
+	sy += 16;
+	while (lineBuffer < SCREEN_XSIZE) {
+            int tileX = XPos >> 12;
+	    int tileY = YPos >> 12;
+            if (tileX > -1 && tileX < layerWidth && tileY > -1 && tileY < layerHeight) {
+                int chunk = tile3DFloorBuffer[(YPos >> 16 << 8) + (XPos >> 16)];
+		_3ds_prepTile(sx, sy, tilesetGFXData[tiles128x128.gfxDataPos[chunk]],
+			       	tiles128x128.direction[chunk], tileLayerToDraw);
+	    }
+
+	    lineBuffer += 16;
+	    XPos += 16;
+
+	    sx += 16;
+	}
+    }
 #elif RETRO_RENDERTYPE == RETRO_HW_RENDER
     // TODO: this
 #endif

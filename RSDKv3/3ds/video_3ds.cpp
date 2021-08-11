@@ -204,6 +204,8 @@ void PlayVideo(const char* fileName) {
 	C2D_Prepare();
 
 	topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
+#else
+	gfxSet3D(false);
 #endif
 
 	changeFile(fileName);
@@ -227,5 +229,7 @@ void CloseVideo() {
 	C3D_Fini();
 
 	gfxSetScreenFormat(GFX_TOP, GSP_RGB565_OES);
+#else
+	gfxSet3D(true);
 #endif
 }

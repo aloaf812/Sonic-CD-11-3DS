@@ -20,6 +20,7 @@ void initDevMenu()
     textMenuSurfaceNo = 0;
     LoadGIFFile("Data/Game/SystemText.gif", 0);
 #if RETRO_USING_C2D
+    gfxSet3D(false);
     _3ds_delSpriteSurface(0);
     _3ds_cacheSpriteSurface(0);
 #endif

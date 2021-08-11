@@ -110,6 +110,7 @@ void ProcessStage(void)
         case STAGEMODE_LOAD: // Startup
 #if RETRO_USING_C2D
     _3ds_delTileSurface();
+    gfxSet3D(true);
 #endif
 
             fadeMode = 0;
