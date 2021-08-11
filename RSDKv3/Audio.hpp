@@ -218,9 +218,7 @@ void PlaySfx(int sfx, bool loop);
 inline void StopSfx(int sfx)
 {
 #if RETRO_USING_SDLMIXER
-    for (int i = 0; i < AUDIO_CHANNELS; i++) {
-	Mix_HaltChannel(i);
-    }
+    Mix_HaltChannel(-1);
 #else
     for (int i = 0; i < CHANNEL_COUNT; ++i) {
         if (sfxChannels[i].sfxID == sfx) {
