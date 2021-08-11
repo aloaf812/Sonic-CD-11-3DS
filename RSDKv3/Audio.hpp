@@ -159,14 +159,17 @@ void ProcessAudioMixing(Sint32 *dst, const Sint16 *src, int len, int volume, sby
 
 #if RETRO_USING_SDLMIXER
 inline void FreeAllMusic() {
+    Mix_HaltMusic();
     for (int i = 0; i < TRACK_COUNT; i++)
-	if (musicTracks[i].mus) {
+	if (musicTracks[i].mus != NULL) {
             Mix_FreeMusic(musicTracks[i].mus);
 	    musicTracks[i].mus = NULL;
+	    /*
 	    SDL_RWclose(trackRwops[i]);
 	    trackRwops[i] = NULL;
 	    free(trackData[i]);
 	    trackData[i] = NULL;
+	    */
 	}
 }
 #endif
@@ -202,7 +205,6 @@ inline void StopMusic()
 #if RETRO_USING_SDLMIXER
     Mix_HaltMusic();
     musicStatus = MUSIC_STOPPED;
-    //Mix_FreeMusic(musicTracks[trackID].mus);
     freeMusInfo();
 #else
     SDL_LockAudio();
@@ -274,12 +276,16 @@ inline void ReleaseGlobalSfx()
     for (int i = globalSFXCount - 1; i >= 0; --i) {
         if (sfxList[i].loaded) {
 #if RETRO_USING_SDLMIXER
-            Mix_FreeChunk(sfxList[i].chunk);
-	    sfxList[i].chunk = NULL;
+	    if (sfxList[i].chunk) {
+                Mix_FreeChunk(sfxList[i].chunk);
+	        sfxList[i].chunk = NULL;
+	    }
+	    /*
 	    SDL_RWclose(sfxRwops[i]);
 	    sfxRwops[i] = NULL;
 	    free(sfxData[i]);
 	    sfxData[i] = NULL;
+	    */
 #endif
 
             StrCopy(sfxList[i].name, "");
@@ -295,13 +301,16 @@ inline void ReleaseStageSfx()
     for (int i = stageSFXCount + globalSFXCount; i >= globalSFXCount; --i) {
         if (sfxList[i].loaded) {
 #if RETRO_USING_SDLMIXER
-	    Mix_FreeChunk(sfxList[i].chunk);
-            sfxList[i].chunk = NULL;
+	    if (sfxList[i].chunk) {
+	        Mix_FreeChunk(sfxList[i].chunk);
+                sfxList[i].chunk = NULL;
+	    }
+	    /*
 	    SDL_RWclose(sfxRwops[i]);
 	    sfxRwops[i] = NULL;
 	    free(sfxData[i]);
 	    sfxData[i] = NULL;
-
+	    */
 #endif
 
             StrCopy(sfxList[i].name, "");

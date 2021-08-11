@@ -1,7 +1,4 @@
 #include "../RetroEngine.hpp"
-#include "3ds-theoraplayer/source/video.h"
-#include "3ds-theoraplayer/source/frame.h"
-
 #define SCREEN_WIDTH  400
 #define SCREEN_HEIGHT 240
 
@@ -12,7 +9,7 @@
 // across both hardware and software builds
 
 // following code ripped from 3ds-theoraplayer's main.c
-C3D_RenderTarget* top;
+C3D_RenderTarget* topScreen;
 THEORA_Context vidCtx;
 TH3DS_Frame frame;
 Thread vthread = NULL;
@@ -59,7 +56,7 @@ void videoDecode_thread(void* nul) {
 	THEORA_videoinfo* vinfo = THEORA_vidinfo(&vidCtx);
 	THEORA_audioinfo* ainfo = THEORA_audinfo(&vidCtx);
 
-	if (THEORA_HasAudio(&vidCtx))
+	if (THEORA_HasAudio(&vidCtx) && !GetGlobalVariableByName("Options.Soundtrack"))
 		audioInit(ainfo);
 
 	if (THEORA_HasVideo(&vidCtx)) {
@@ -82,7 +79,7 @@ void videoDecode_thread(void* nul) {
 			}
 		}
 
-		if (THEORA_HasAudio(&vidCtx)) {
+		if (THEORA_HasAudio(&vidCtx) && !GetGlobalVariableByName("Options.Soundtrack")) {
 			for (int cur_wvbuf = 0; cur_wvbuf < WAVEBUFCOUNT; cur_wvbuf++) {
 				ndspWaveBuf *buf = &waveBuf[cur_wvbuf];
 
@@ -108,7 +105,7 @@ void videoDecode_thread(void* nul) {
 	if (THEORA_HasVideo(&vidCtx))
 		frameDelete(&frame);
 
-	if (THEORA_HasAudio(&vidCtx))
+	if (THEORA_HasAudio(&vidCtx) && !GetGlobalVariableByName("Options.Soundtrack"))
 		audioClose();
 
 	THEORA_Close(&vidCtx);
@@ -192,8 +189,11 @@ static void changeFile(const char* filepath) {
 
 void PlayVideo(const char* fileName) {
 	// de-init Retro Engine audio thread
-	ReleaseAudioDevice();
-	ndspInit();
+	if (!GetGlobalVariableByName("Options.Soundtrack")) {
+		ReleaseAudioDevice();
+		ndspInit();
+		ndspSetCallback(audioCallback, NULL);
+	}
 
 #if !RETRO_USING_C2D
 	// using the software-rendered build; init Citro2D here
@@ -203,43 +203,24 @@ void PlayVideo(const char* fileName) {
 	C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
 	C2D_Prepare();
 
-	top = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
-#else
-	top = Engine.topScreen;
+	topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
 #endif
 
-	ndspSetCallback(audioCallback, NULL);
 	changeFile(fileName);
 	videodone = false;
+	videoPlaying = true;
+}
 
-	while (aptMainLoop()) {
-		hidScanInput();
-		u32 kUp = hidKeysUp();
-
-		if (kUp & KEY_START) {
-			videodone = true;
-		}
-
-		if (videodone)
-			break;
-
-		C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-			C2D_TargetClear(top, C2D_Color32(0, 0, 0, 255));
-			C2D_SceneBegin(top);
-			if (isplaying && THEORA_HasVideo(&vidCtx))
-				frameDrawAtCentered(&frame, SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0.5f, 
-						scaleframe, scaleframe);
-		C3D_FrameEnd(0);
-	}
-
+void CloseVideo() {
 	printLog("video done, attempting to de-init");
 	exitThread();
-	ndspExit();
-	printLog("de-init successful, re-init audio");
 
 	// re-init Retro Engine audio thread
-	ndspInit();
-	InitAudioPlayback();
+	if (!GetGlobalVariableByName("Options.Soundtrack")) {
+		ndspExit();
+		ndspInit();
+		InitAudioPlayback();
+	}
 
 #if !RETRO_USING_C2D
 	C2D_Fini();
@@ -247,6 +228,4 @@ void PlayVideo(const char* fileName) {
 
 	gfxSetScreenFormat(GFX_TOP, GSP_RGB565_OES);
 #endif
-
-	printLog("re-init successful, control returning to Retro Engine");
 }

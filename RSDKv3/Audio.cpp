@@ -650,7 +650,7 @@ void SetMusicTrack(char *filePath, byte trackID, bool loop, uint loopPoint)
         FileRead(trackData[trackID], info.fileSize);
         CloseFile();
 
-        trackRwops[trackID] = SDL_RWFromMem(trackData[trackID], info.fileSize);
+        trackRwops[trackID] = SDL_RWFromConstMem(trackData[trackID], info.fileSize);
         if (trackRwops[trackID] == NULL) {
 	    printLog("Unable to open music: %s", info.fileName);
         } else {
@@ -727,7 +727,7 @@ void LoadSfx(char *filePath, byte sfxID)
 	FileRead(sfxData[sfxID], info.fileSize);
 	CloseFile();
 
-        sfxRwops[sfxID] = SDL_RWFromMem(sfxData[sfxID], info.fileSize);
+        sfxRwops[sfxID] = SDL_RWFromConstMem(sfxData[sfxID], info.fileSize);
 	if (sfxRwops[sfxID] == NULL) {
 	    printLog("Unable to open sfx: %s", info.fileName);
 	} else {
@@ -745,7 +745,7 @@ void LoadSfx(char *filePath, byte sfxID)
         CloseFile();
 
         SDL_LockAudio();
-        SDL_RWops *src = SDL_RWFromMem(sfx, info.fileSize);
+        SDL_RWops *src = SDL_RWFromConstMem(sfx, info.fileSize);
         if (src == NULL) {
             printLog("Unable to open sfx: %s", info.fileName);
         }

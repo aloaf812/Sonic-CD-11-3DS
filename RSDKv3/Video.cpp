@@ -36,10 +36,10 @@ static long videoRead(THEORAPLAY_Io *io, void *buf, long buflen)
 
 static void videoClose(THEORAPLAY_Io *io)
 {
-    #if RETRO_USING_SDL
+#if RETRO_USING_SDL2 || RETRO_USING_SDL1
     FileIO *file = (FileIO *)io->userdata;
     fClose(file);
-    #endif
+#endif
 }
 
 void PlayVideoFile(char *filePath)
@@ -61,6 +61,9 @@ void PlayVideoFile(char *filePath)
     if (file) {
 	CloseFile();
         PlayVideo(filepath);
+	videoPlaying = true;
+        Engine.gameMode = ENGINE_VIDEOWAIT;
+	videoSkipped = false;
     } else {
         printLog("could not find %s, ignoring", filepath);
     }
@@ -116,7 +119,11 @@ void PlayVideoFile(char *filePath)
 
 void UpdateVideoFrame()
 {
-    #if RETRO_USING_SDL
+#if RETRO_PLATFORM == RETRO_3DS
+    if (videodone) {
+         StopVideoPlayback();	
+    }
+#elif RETRO_USING_SDL2 || RETRO_USING_SDL1
     if (videoPlaying) {
         if (videoFrameCount > currentVideoFrame) {
             GFXSurface *surface = &gfxSurface[videoData];
@@ -165,12 +172,11 @@ void UpdateVideoFrame()
             CloseFile();
         }
     }
-    #endif
+#endif
 }
 
 int ProcessVideo()
 {
-    #if RETRO_USING_SDL
     if (videoPlaying) {
         CheckKeyPress(&keyPress, 0x10);
 
@@ -185,14 +191,23 @@ int ProcessVideo()
             videoSkipped = true;
         }
 
+#if RETRO_PLATFORM == RETRO_3DS
+        if (videoSkipped || videodone) {
+            StopVideoPlayback();
+
+	    return 1;
+	}
+#else
         if (!THEORAPLAY_isDecoding(videoDecoder) || (videoSkipped && fadeMode >= 0xFF)) {
             StopVideoPlayback();
 
             return 1; // video finished
         }
+#endif
 
         // Don't pause or it'll go wild
         if (videoPlaying) {
+#if RETRO_PLATFORM != RETRO_3DS
             const Uint32 now = (SDL_GetTicks() - vidBaseticks);
 
             if (!videoVidData)
@@ -244,18 +259,22 @@ int ProcessVideo()
                 THEORAPLAY_freeVideo(videoVidData);
                 videoVidData = NULL;
             }
+#endif
 
             return 2; // its playing as expected
         }
     }
-    #endif
 
     return 0; // its not even initialised
 }
 
 void StopVideoPlayback()
 {
-    #if RETRO_USING_SDL
+#if RETRO_PLATFORM == RETRO_3DS
+    CloseVideo();
+    videoPlaying = false;
+    Engine.gameMode = ENGINE_MAINGAME;
+#elif RETRO_USING_SDL2 || RETRO_USING_SDL1
     if (videoPlaying) {
         // `videoPlaying` and `videoDecoder` are read by
         // the audio thread, so lock it to prevent a race
@@ -279,7 +298,7 @@ void StopVideoPlayback()
 
         SDL_UnlockAudio();
     }
-    #endif
+#endif
 }
 
 void SetupVideoBuffer(int width, int height)
@@ -299,7 +318,8 @@ void SetupVideoBuffer(int width, int height)
 
 void CloseVideoBuffer()
 {
-#if RETRO_SOFTWARE_RENDER
+
+#if RETRO_SOFTWARE_RENDER && RETRO_PLATFORM != RETRO_3DS
     if (videoPlaying) {
 #if RETRO_USING_SDL1
         SDL_FreeSurface(Engine.videoBuffer);

@@ -281,6 +281,8 @@ enum RetroBytecodeFormat {
 #include <theoraplay.h>
 #include <math.h>
 #include <unistd.h>
+#include "3ds/3ds-theoraplayer/source/video.h"
+#include "3ds/3ds-theoraplayer/source/frame.h"
 #if RETRO_USING_SDL1_AUDIO
 #include <SDL/SDL.h>
 #endif

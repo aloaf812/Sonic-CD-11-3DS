@@ -324,34 +324,54 @@ void RenderRenderDevice()
     // pillarboxes in fullscreen from displaying garbage data.
     SDL_RenderClear(Engine.renderer);
 #elif RETRO_USING_C2D
-    C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-    if (clearScreen) {
-    	C2D_TargetClear(Engine.topScreen, clearColor);
-	clearScreen = 0;
+    if (videoPlaying) {
+        C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+	    C2D_TargetClear(Engine.topScreen, C2D_Color32(0, 0, 0, 255));
+	    C2D_SceneBegin(Engine.topScreen);
+	    if (isplaying && THEORA_HasVideo(&vidCtx))
+	        frameDrawAtCentered(&frame, SCREEN_XSIZE/2, SCREEN_YSIZE/2, 0.5f, 
+						scaleframe, scaleframe);
+        C3D_FrameEnd(0);
+    } else {
+        C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+        if (clearScreen) {
+    	    C2D_TargetClear(Engine.topScreen, clearColor);
+	    clearScreen = 0;
+        }
+
+        C2D_SceneBegin(Engine.topScreen);
+
+        drawSpriteLayer(0);
+        drawTileLayer(0);
+        drawSpriteLayer(1);
+        drawTileLayer(1);
+        drawSpriteLayer(2);
+        drawTileLayer(2);
+        drawSpriteLayer(3);
+        drawSpriteLayer(4);
+        drawTileLayer(3);
+        drawSpriteLayer(5);
+        drawSpriteLayer(6);
+
+
+        C3D_FrameEnd(0);
     }
-
-    C2D_SceneBegin(Engine.topScreen);
-
-    drawSpriteLayer(0);
-    drawTileLayer(0);
-    drawSpriteLayer(1);
-    drawTileLayer(1);
-    drawSpriteLayer(2);
-    drawTileLayer(2);
-    drawSpriteLayer(3);
-    drawSpriteLayer(4);
-    drawTileLayer(3);
-    drawSpriteLayer(5);
-    drawSpriteLayer(6);
-
-
-    C3D_FrameEnd(0);
 #elif RETRO_PLATFORM == RETRO_3DS && !RETRO_USING_C2D
-    CopyToFramebuffer();
-    gfxFlushBuffers();
-    gfxSwapBuffers();
-    gspWaitForVBlank();
-#endif
+   if (videoPlaying) {
+        C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+	    C2D_TargetClear(topScreen, C2D_Color32(0, 0, 0, 255));
+	    C2D_SceneBegin(topScreen);
+	    if (isplaying && THEORA_HasVideo(&vidCtx))
+	        frameDrawAtCentered(&frame, SCREEN_XSIZE/2, SCREEN_YSIZE/2, 0.5f, 
+						scaleframe, scaleframe);
+        C3D_FrameEnd(0);
+    } else {
+        CopyToFramebuffer();
+        gfxFlushBuffers();
+        gfxSwapBuffers();
+        gspWaitForVBlank();
+    }
+    #endif
 
     ushort *pixels = NULL;
     if (Engine.gameMode != ENGINE_VIDEOWAIT) {
