@@ -41,38 +41,32 @@ bool processEvents()
                         break;
                     }
                     case SDL_WINDOWEVENT_CLOSE: Engine.gameMode = ENGINE_EXITGAME; return false;
+                    case SDL_WINDOWEVENT_FOCUS_LOST: Engine.message = MESSAGE_LOSTFOCUS; break;
                 }
                 break;
-            case SDL_CONTROLLERDEVICEADDED: controllerInit(SDL_NumJoysticks() - 1); break;
-            case SDL_CONTROLLERDEVICEREMOVED: controllerClose(SDL_NumJoysticks() - 1); break;
-            case SDL_WINDOWEVENT_CLOSE:
-                if (Engine.window) {
-                    SDL_DestroyWindow(Engine.window);
-                    Engine.window = NULL;
-                }
-                Engine.gameMode = ENGINE_EXITGAME;
-                return false;
-            case SDL_APP_WILLENTERBACKGROUND: /*Engine.Callback(CALLBACK_ENTERBG);*/ break;
-            case SDL_APP_WILLENTERFOREGROUND: /*Engine.Callback(CALLBACK_ENTERFG);*/ break;
-            case SDL_APP_TERMINATING: Engine.gameMode = ENGINE_EXITGAME; break;
+            case SDL_CONTROLLERDEVICEADDED: controllerInit(Engine.sdlEvents.cdevice.which); break;
+            case SDL_CONTROLLERDEVICEREMOVED: controllerClose(Engine.sdlEvents.cdevice.which); break;
+            case SDL_APP_WILLENTERBACKGROUND: Engine.message = MESSAGE_LOSTFOCUS; break;
+            case SDL_APP_TERMINATING: Engine.gameMode = ENGINE_EXITGAME; return false;
+
 #endif
 
 #ifdef RETRO_USING_MOUSE
             case SDL_MOUSEMOTION:
 #if RETRO_USING_SDL2
-                if (SDL_GetNumTouchFingers(SDL_GetTouchDevice(RETRO_TOUCH_DEVICE)) <= 0) { // Touch always takes priority over mouse
-#endif
+                if (touches <= 1) { // Touch always takes priority over mouse
                     SDL_GetMouseState(&touchX[0], &touchY[0]);
-                    touchX[0] /= Engine.windowScale;
-                    touchY[0] /= Engine.windowScale;
-                    touches = 1;
-#if RETRO_USING_SDL2
+
+                    int width = 0, height = 0;
+                    SDL_GetWindowSize(Engine.window, &width, &height);
+                    touchX[0] = (touchX[0] / (float)width) * SCREEN_XSIZE;
+                    touchY[0] = (touchY[0] / (float)height) * SCREEN_YSIZE;
                 }
 #endif
                 break;
             case SDL_MOUSEBUTTONDOWN:
 #if RETRO_USING_SDL2
-                if (SDL_GetNumTouchFingers(SDL_GetTouchDevice(RETRO_TOUCH_DEVICE)) <= 0) { // Touch always takes priority over mouse
+                if (touches <= 0) { // Touch always takes priority over mouse
 #endif
                     switch (Engine.sdlEvents.button.button) {
                         case SDL_BUTTON_LEFT: touchDown[0] = 1; break;
@@ -84,12 +78,12 @@ bool processEvents()
                 break;
             case SDL_MOUSEBUTTONUP:
 #if RETRO_USING_SDL2
-                if (SDL_GetNumTouchFingers(SDL_GetTouchDevice(RETRO_TOUCH_DEVICE)) <= 0) { // Touch always takes priority over mouse
+                if (touches <= 1) { // Touch always takes priority over mouse
 #endif
                     switch (Engine.sdlEvents.button.button) {
                         case SDL_BUTTON_LEFT: touchDown[0] = 0; break;
                     }
-                    touches = 1;
+                    touches = 0;
 #if RETRO_USING_SDL2
                 }
 #endif
@@ -99,34 +93,56 @@ bool processEvents()
 #ifdef RETRO_USING_TOUCH
 #if RETRO_USING_SDL2
             case SDL_FINGERMOTION:
-                touches = SDL_GetNumTouchFingers(SDL_GetTouchDevice(RETRO_TOUCH_DEVICE));
+                touches = SDL_GetNumTouchFingers(Engine.sdlEvents.tfinger.touchId);
                 for (int i = 0; i < touches; i++) {
-                    touchDown[i]       = true;
-                    SDL_Finger *finger = SDL_GetTouchFinger(SDL_GetTouchDevice(RETRO_TOUCH_DEVICE), i);
-                    touchX[i]          = (finger->x * SCREEN_XSIZE * Engine.windowScale) / Engine.windowScale;
-
-                    touchY[i] = (finger->y * SCREEN_YSIZE * Engine.windowScale) / Engine.windowScale;
+                    SDL_Finger *finger = SDL_GetTouchFinger(Engine.sdlEvents.tfinger.touchId, i);
+                    if (finger) {
+                        touchDown[i] = true;
+                        touchX[i]    = finger->x * SCREEN_XSIZE;
+                        touchY[i]    = finger->y * SCREEN_YSIZE;
+                    }
                 }
                 break;
             case SDL_FINGERDOWN:
-                touches = SDL_GetNumTouchFingers(SDL_GetTouchDevice(RETRO_TOUCH_DEVICE));
+                touches = SDL_GetNumTouchFingers(Engine.sdlEvents.tfinger.touchId);
                 for (int i = 0; i < touches; i++) {
-                    touchDown[i]       = true;
-                    SDL_Finger *finger = SDL_GetTouchFinger(SDL_GetTouchDevice(RETRO_TOUCH_DEVICE), i);
-                    touchX[i]          = (finger->x * SCREEN_XSIZE * Engine.windowScale) / Engine.windowScale;
-
-                    touchY[i] = (finger->y * SCREEN_YSIZE * Engine.windowScale) / Engine.windowScale;
+                    SDL_Finger *finger = SDL_GetTouchFinger(Engine.sdlEvents.tfinger.touchId, i);
+                    if (finger) {
+                        touchDown[i] = true;
+                        touchX[i]    = finger->x * SCREEN_XSIZE;
+                        touchY[i]    = finger->y * SCREEN_YSIZE;
+                    }
                 }
                 break;
-            case SDL_FINGERUP: touches = SDL_GetNumTouchFingers(SDL_GetTouchDevice(RETRO_TOUCH_DEVICE)); break;
+            case SDL_FINGERUP: touches = SDL_GetNumTouchFingers(Engine.sdlEvents.tfinger.touchId); break;
 #endif
 #endif
             case SDL_KEYDOWN:
                 switch (Engine.sdlEvents.key.keysym.sym) {
                     default: break;
                     case SDLK_ESCAPE:
-                        if (Engine.devMenu)
+                        if (Engine.devMenu) {
+#if RETRO_USE_MOD_LOADER
+                            // hacky patch because people can escape
+                            if (Engine.gameMode == ENGINE_DEVMENU && stageMode == DEVMENU_MODMENU) {
+                                // Reload entire engine
+                                Engine.LoadGameConfig("Data/Game/GameConfig.bin");
+
+                                ReleaseStageSfx();
+                                ReleaseGlobalSfx();
+                                LoadGlobalSfx();
+
+                                forceUseScripts = false;
+                                for (int m = 0; m < modList.size(); ++m) {
+                                    if (modList[m].useScripts && modList[m].active)
+                                        forceUseScripts = true;
+                                }
+                                saveMods();
+                            }
+#endif
+
                             Engine.gameMode = ENGINE_INITDEVMENU;
+                        }
                         break;
                     case SDLK_F4:
                         Engine.isFullScreen ^= 1;
@@ -136,10 +152,33 @@ bool processEvents()
                                                                     SDL_SWSURFACE | SDL_FULLSCREEN);
                             SDL_ShowCursor(SDL_FALSE);
 #endif
-
 #if RETRO_USING_SDL2
                             SDL_RestoreWindow(Engine.window);
                             SDL_SetWindowFullscreen(Engine.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+#endif
+#if RETRO_HARDWARE_RENDER
+                            int w = SCREEN_XSIZE * Engine.windowScale;
+                            int h = SCREEN_YSIZE * Engine.windowScale;
+#if RETRO_USING_SDL2
+                            SDL_GetWindowSize(Engine.window, &w, &h);
+#endif
+                            float virtualAspect = (float)SCREEN_XSIZE / SCREEN_YSIZE;
+                            float realAspect    = (float)w / h;
+
+                            int vx = 0, vy = 0, vw = w, vh = h;
+                            if (virtualAspect > realAspect) {
+                                vh = SCREEN_YSIZE * ((float)w / SCREEN_XSIZE);
+                                vy = (h - vh) >> 1;
+                            }
+                            else {
+                                vw = SCREEN_XSIZE * ((float)h / SCREEN_YSIZE);
+                                vx = (w - vw) >> 1;
+                            }
+                            SetScreenDimensions(SCREEN_XSIZE, SCREEN_YSIZE, w, h);
+                            virtualX      = vx;
+                            virtualY      = vy;
+                            virtualWidth  = vw;
+                            virtualHeight = vh;
 #endif
                         }
                         else {
@@ -149,6 +188,9 @@ bool processEvents()
                             SDL_ShowCursor(SDL_TRUE);
 #endif
 
+#if RETRO_HARDWARE_RENDER
+                            SetScreenDimensions(SCREEN_XSIZE, SCREEN_YSIZE, SCREEN_XSIZE * Engine.windowScale, SCREEN_YSIZE * Engine.windowScale);
+#endif
 #if RETRO_USING_SDL2
                             SDL_SetWindowFullscreen(Engine.window, 0);
                             SDL_SetWindowSize(Engine.window, SCREEN_XSIZE * Engine.windowScale, SCREEN_YSIZE * Engine.windowScale);
@@ -219,10 +261,12 @@ bool processEvents()
                             Engine.gameSpeed = Engine.fastForwardSpeed;
                         break;
                     case SDLK_F11:
+                    case SDLK_INSERT:
                         if (Engine.masterPaused)
                             Engine.frameStep = true;
                         break;
                     case SDLK_F12:
+                    case SDLK_PAUSE:
                         if (Engine.devMenu)
                             Engine.masterPaused ^= 1;
                         break;
@@ -258,7 +302,9 @@ bool RetroEngine::Init()
     CalculateTrigAngles();
     GenerateBlendLookupTable();
     InitUserdata();
+#if RETRO_USE_MOD_LOADER
     initMods();
+#endif
     char dest[0x200];
 #if RETRO_PLATFORM == RETRO_UWP
     static char resourcePath[256] = { 0 };
@@ -440,10 +486,15 @@ void RetroEngine::Run()
     StopVideoPlayback();
     ReleaseRenderDevice();
     writeSettings();
+#if RETRO_USE_MOD_LOADER
     saveMods();
+#endif
 
 #if RETRO_USING_SDL1 || RETRO_USING_SDL2 || RETRO_USING_SDL1_AUDIO
     SDL_QuitSubSystem(SDL_INIT_AUDIO);
+#endif
+#if RETRO_USING_SDL1 || RETRO_USING_SDL2
+    SDL_Quit();
 #endif
 }
 

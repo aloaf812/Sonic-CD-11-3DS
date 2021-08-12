@@ -28,6 +28,7 @@ struct LeaderboardEntry {
     int status;
 };
 
+#if RETRO_USE_MOD_LOADER
 struct ModInfo {
     std::string name;
     std::string desc;
@@ -38,6 +39,7 @@ struct ModInfo {
     bool useScripts;
     bool active;
 };
+#endif
 
 extern int globalVariablesCount;
 extern int globalVariables[GLOBALVAR_COUNT];
@@ -52,9 +54,10 @@ extern LeaderboardEntry leaderboard[LEADERBOARD_MAX];
 extern int controlMode;
 extern bool disableTouchControls;
 
-extern ModInfo modList[MOD_MAX];
-extern int modCount;
+#if RETRO_USE_MOD_LOADER
+extern std::vector<ModInfo> modList;
 extern bool forceUseScripts;
+#endif
 
 inline int GetGlobalVariableByName(const char *name)
 {
@@ -78,11 +81,13 @@ inline void SetGlobalVariableByName(const char *name, int value)
 inline bool ReadSaveRAMData()
 {
     char buffer[0x200];
-#if RETRO_PLATFORM == RETRO_OSX || RETRO_PLATFORM == RETRO_UWP
+#if RETRO_PLATFORM == RETRO_UWP
     if (!usingCWD)
         sprintf(buffer, "%s/Sdata.bin",getResourcesPath());
     else
         sprintf(buffer, "%sSdata.bin", gamePath);
+#elif RETRO_PLATFORM == RETRO_OSX
+    sprintf(buffer, "%s/SData.bin", gamePath);
 #elif RETRO_PLATFORM == RETRO_iOS
         sprintf(buffer, "%s/SData.bin", getDocumentsPath());
 #else
@@ -105,11 +110,13 @@ inline bool ReadSaveRAMData()
 inline bool WriteSaveRAMData()
 {
     char buffer[0x200];
-#if RETRO_PLATFORM == RETRO_OSX || RETRO_PLATFORM == RETRO_UWP
+#if RETRO_PLATFORM == RETRO_UWP
     if (!usingCWD)
         sprintf(buffer, "%s/Sdata.bin",getResourcesPath());
     else
         sprintf(buffer, "%sSdata.bin", gamePath);
+#elif RETRO_PLATFORM == RETRO_OSX
+    sprintf(buffer, "%s/SData.bin", gamePath);
 #elif RETRO_PLATFORM == RETRO_iOS
     sprintf(buffer, "%s/SData.bin", getDocumentsPath());
 #else
@@ -140,7 +147,10 @@ void SetLeaderboard(int leaderboardID, int result);
 inline void LoadAchievementsMenu() { ReadUserdata(); }
 inline void LoadLeaderboardsMenu() { ReadUserdata(); }
 
+#if RETRO_USE_MOD_LOADER
 void initMods();
+bool loadMod(ModInfo *info, std::string modsPath, std::string folder, bool active);
 void saveMods();
+#endif
 
 #endif //!USERDATA_H

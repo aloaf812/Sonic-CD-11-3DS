@@ -345,8 +345,8 @@ int LoadGIFFile(const char *filePath, byte sheetID)
         surface->height += (fileBuffer << 8);
 
         FileRead(&fileBuffer, 1); // Palette Size
-        int has_pallete = (fileBuffer & 0x80) >> 7;
-        int colors = ((fileBuffer & 0x70) >> 4) + 1;
+        //int has_pallete = (fileBuffer & 0x80) >> 7;
+        //int colors = ((fileBuffer & 0x70) >> 4) + 1;
         int palette_size = (fileBuffer & 0x7) + 1;
         if (palette_size > 0)
             palette_size = 1 << palette_size;
@@ -490,9 +490,9 @@ int LoadRSVFile(const char *filePath, byte sheetID)
         videoHeight += fileBuffer << 8;
 
         videoFilePos   = (int)GetFilePosition();
-        videoPlaying   = true;
-        surface->height       = videoWidth;
-        surface->width        = videoHeight;
+        videoPlaying          = true;
+        surface->width        = videoWidth;
+        surface->height       = videoHeight;
         surface->dataPosition = gfxDataPosition;
         gfxDataPosition += surface->width * surface->height;
 
@@ -501,7 +501,6 @@ int LoadRSVFile(const char *filePath, byte sheetID)
             printLog("WARNING: Exceeded max gfx size!");
         }
 
-        CloseFile();
         return true;
     }
     return false;

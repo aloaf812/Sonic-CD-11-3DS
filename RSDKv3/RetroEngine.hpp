@@ -4,6 +4,18 @@
 // Disables POSIX use c++ name blah blah stuff
 #pragma warning(disable : 4996)
 
+// Setting this to true removes (almost) ALL changes from the original code, the trade off is that a playable game cannot be built, it is advised to
+// be set to true only for preservation purposes
+#define RETRO_USE_ORIGINAL_CODE (0)
+#define RETRO_USE_MOD_LOADER    (0)
+
+#if !RETRO_USE_ORIGINAL_CODE
+#undef RETRO_USE_MOD_LOADER
+#if RETRO_PLATFORM != RETRO_3DS
+#define RETRO_USE_MOD_LOADER (1)
+#endif
+#endif //  !RETRO_USE_ORIGINAL_CODE
+
 // ================
 // STANDARD LIBS
 // ================
@@ -62,6 +74,8 @@ typedef unsigned int uint;
 #else
 #error "Unknown Apple platform"
 #endif
+#elif defined __ANDROID__
+#define RETRO_PLATFORM   (RETRO_ANDROID)
 #elif defined __vita__
 #define RETRO_PLATFORM (RETRO_VITA)
 #elif defined _3DS
@@ -78,20 +92,23 @@ typedef unsigned int uint;
 #define BASE_PATH            ""
 #define DEFAULT_SCREEN_XSIZE 424
 #define DEFAULT_FULLSCREEN   false
-#elif RETRO_PLATFORM == RETRO_3DS
 #define BASE_PATH            "/3ds/SonicCD/"
 #define DEFAULT_SCREEN_XSIZE 400
 #define DEFAULT_FULLSCREEN   true
+#define RETRO_DEFAULTSCALINGMODE 2  // gets the compiler to shut up
 #else
 #define BASE_PATH            ""
 #define RETRO_USING_MOUSE
 #define RETRO_USING_TOUCH
 #define DEFAULT_SCREEN_XSIZE 424
 #define DEFAULT_FULLSCREEN   false
+
+// set this to 1 (integer scale) for other platforms that don't support bilinear and don't have an even screen size
+#define RETRO_DEFAULTSCALINGMODE 2
 #endif
 
 #if RETRO_PLATFORM == RETRO_WIN || RETRO_PLATFORM == RETRO_OSX || RETRO_PLATFORM == RETRO_iOS || RETRO_PLATFORM == RETRO_VITA                        \
-    || RETRO_PLATFORM == RETRO_UWP
+  || RETRO_PLATFORM == RETRO_UWP || RETRO_PLATFORM == RETRO_ANDROID
 
 #define RETRO_USING_SDL2       (1)
 #define RETRO_USING_SDL1       (0)
@@ -213,6 +230,13 @@ enum RetroStates {
     ENGINE_VIDEOWAIT       = 9,
 };
 
+enum RetroEngineMessages {
+    MESSAGE_NONE      = 0,
+    MESSAGE_LOSTFOCUS = 2,
+    MESSAGE_MESSAGE_3 = 3,
+    MESSAGE_MESSAGE_4 = 4,
+};
+
 enum RetroEngineCallbacks {
     CALLBACK_DISPLAYLOGOS            = 0,
     CALLBACK_PRESS_START             = 1,
@@ -243,7 +267,7 @@ enum RetroBytecodeFormat {
 #define SCREEN_YSIZE   (240)
 #define SCREEN_CENTERY (SCREEN_YSIZE / 2)
 
-#if RETRO_PLATFORM == RETRO_WIN || RETRO_PLATFORM == RETRO_UWP
+#if RETRO_PLATFORM == RETRO_WIN || RETRO_PLATFORM == RETRO_UWP || RETRO_PLATFORM == RETRO_ANDROID
 #if RETRO_USING_SDL2
 #include <SDL.h>
 #elif RETRO_USING_SDL1
@@ -291,6 +315,10 @@ enum RetroBytecodeFormat {
 #if RETRO_USING_SDLMIXER
 #include <SDL/SDL.h>
 #include <SDL/SDL_mixer.h>
+#endif
+
+#if RETRO_PLATFORM == RETRO_ANDROID
+#include <jni.h>
 #endif
 
 extern bool usingCWD;
@@ -361,6 +389,7 @@ public:
 
     bool useSteamDir = true;
 
+#if !RETRO_USE_ORIGINAL_CODE
     // Ported from RSDKv5
     bool devMenu         = false;
     int startList        = 0;
@@ -369,9 +398,14 @@ public:
     int fastForwardSpeed = 8;
     bool masterPaused    = false;
     bool frameStep       = false;
+    int dimTimer         = 0;
+    int dimLimit         = 0;
+    float dimPercent     = 1.0;
+    float dimMax         = 1.0;
 
     bool showPaletteOverlay = false;
     bool useHQModes         = false;
+#endif
 
     bool Init();
     void Run();
@@ -385,7 +419,7 @@ public:
 
     char gameWindowText[0x40];
     char gameDescriptionText[0x100];
-    const char *gameVersion = "1.1.0";
+    const char *gameVersion = "1.1.2";
     const char *gamePlatform;
 
 #if RETRO_SOFTWARE_RENDER
@@ -406,7 +440,7 @@ public:
     bool startFullScreen  = false; // if should start as fullscreen
     bool borderless       = false;
     bool vsync            = false;
-    bool enhancedScaling  = true; // enable enhanced scaling
+    int scalingMode       = RETRO_DEFAULTSCALINGMODE;
     int windowScale       = 2;
     int refreshRate       = 60; // user-picked screen update rate
     int screenRefreshRate = 60; // hardware screen update rate

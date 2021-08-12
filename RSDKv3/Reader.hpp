@@ -47,7 +47,10 @@ struct FileInfo {
     byte eStringNo;
     byte eNybbleSwap;
     FileIO *cFileHandle;
+    byte *fileBuffer;
+#if RETRO_USE_MOD_LOADER
     byte isMod;
+#endif
 };
 
 extern char rsdkName[0x400];
@@ -66,7 +69,9 @@ extern byte eStringNo;
 extern byte eNybbleSwap;
 extern char encryptionStringA[21];
 extern char encryptionStringB[13];
+#if RETRO_USE_MOD_LOADER
 extern byte isModdedFile;
+#endif
 
 extern FileIO *cFileHandle;
 
@@ -124,7 +129,9 @@ inline void GetFileInfo(FileInfo *fileInfo)
     fileInfo->eStringPosB       = eStringPosB;
     fileInfo->eStringNo         = eStringNo;
     fileInfo->eNybbleSwap       = eNybbleSwap;
+#if RETRO_USE_MOD_LOADER
     fileInfo->isMod             = isModdedFile;
+#endif
 }
 void SetFileInfo(FileInfo *fileInfo);
 size_t GetFilePosition();
@@ -134,15 +141,15 @@ bool ReachedEndOfFile();
  // For Music Streaming
 bool LoadFile2(const char *filePath, FileInfo *fileInfo);
 bool ParseVirtualFileSystem2(FileInfo *fileInfo);
-size_t FileRead2(FileInfo *info, void *dest, int size);
+size_t FileRead2(FileInfo *info, void *dest, int size, bool fromBuffer);
 inline bool CloseFile2(FileInfo *info)
 {
-    int result = 0;
-    if (info->cFileHandle)
-        result = fClose(info->cFileHandle);
+    if (info->fileBuffer)
+        free(info->fileBuffer);
 
     info->cFileHandle = NULL;
-    return result;
+    info->fileBuffer  = NULL;
+    return true;
 }
 size_t GetFilePosition2(FileInfo *info);
 void SetFilePosition2(FileInfo *info, int newPos);

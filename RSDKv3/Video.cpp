@@ -1,4 +1,4 @@
-﻿#include "RetroEngine.hpp"
+#include "RetroEngine.hpp"
 
 // TODO: all of the functions here have been stubbed for 3DS.
 // Re-implement everything later.
@@ -44,17 +44,62 @@ static void videoClose(THEORAPLAY_Io *io)
 
 void PlayVideoFile(char *filePath)
 {
-    char filepath[0x100];
-    StrCopy(filepath, BASE_PATH "videos/");
-
+    char pathBuffer[0x100];
     int len = StrLength(filePath);
 
     if (StrComp(filePath + ((size_t)len - 2), "us")) {
         filePath[len - 2] = 0;
     }
 
-    StrAdd(filepath, filePath);
-    StrAdd(filepath, ".ogv");
+    StrCopy(pathBuffer, "videos/");
+    StrAdd(pathBuffer, filePath);
+    StrAdd(pathBuffer, ".ogv");
+    
+    bool addPath = true;
+    // Fixes ".ani" ".Ani" bug and any other case differences
+    char pathLower[0x100];
+    memset(pathLower, 0, sizeof(char) * 0x100);
+    for (int c = 0; c < strlen(pathBuffer); ++c) {
+        pathLower[c] = tolower(pathBuffer[c]);
+    }
+
+#if RETRO_USE_MOD_LOADER
+    for (int m = 0; m < modList.size(); ++m) {
+        if (modList[m].active) {
+            std::map<std::string, std::string>::const_iterator iter = modList[m].fileMap.find(pathLower);
+            if (iter != modList[m].fileMap.cend()) {
+                StrCopy(pathBuffer, iter->second.c_str());
+                Engine.forceFolder   = true;
+                Engine.usingDataFile = false;
+                addPath = false;
+                break;
+            }
+        }
+    }
+#endif
+    
+    char filepath[0x100];
+    if (addPath) {
+#if RETRO_PLATFORM == RETRO_UWP
+        static char resourcePath[256] = { 0 };
+
+        if (strlen(resourcePath) == 0) {
+            auto folder = winrt::Windows::Storage::ApplicationData::Current().LocalFolder();
+            auto path   = to_string(folder.Path());
+
+            std::copy(path.begin(), path.end(), resourcePath);
+        }
+
+        sprintf(filepath, "%s/%s", resourcePath, pathBuffer);
+#elif RETRO_PLATFORM == RETRO_OSX || RETRO_PLATFORM == RETRO_ANDROID
+        sprintf(filepath, "%s/%s", gamePath, pathBuffer);
+#else
+        sprintf(filepath, "%s%s", BASE_PATH, pathBuffer);
+#endif
+    }
+    else {
+        sprintf(filepath, "%s", pathBuffer);
+    }
 
     FileIO *file = fOpen(filepath, "rb");
 #if RETRO_PLATFORM == RETRO_3DS
@@ -128,6 +173,7 @@ void UpdateVideoFrame()
         if (videoFrameCount > currentVideoFrame) {
             GFXSurface *surface = &gfxSurface[videoData];
             byte fileBuffer      = 0;
+            byte fileBuffer2      = 0;
             FileRead(&fileBuffer, 1);
             videoFilePos += fileBuffer;
             FileRead(&fileBuffer, 1);
@@ -149,10 +195,10 @@ void UpdateVideoFrame()
             FileRead(&fileBuffer, 1);
             while (fileBuffer != ',') FileRead(&fileBuffer, 1); // gif image start identifier
 
-            FileRead(&fileBuffer, 2); // IMAGE LEFT
-            FileRead(&fileBuffer, 2); // IMAGE TOP
-            FileRead(&fileBuffer, 2); // IMAGE WIDTH
-            FileRead(&fileBuffer, 2); // IMAGE HEIGHT
+            FileRead(&fileBuffer2, 2); // IMAGE LEFT
+            FileRead(&fileBuffer2, 2); // IMAGE TOP
+            FileRead(&fileBuffer2, 2); // IMAGE WIDTH
+            FileRead(&fileBuffer2, 2); // IMAGE HEIGHT
             FileRead(&fileBuffer, 1); // PaletteType
             bool interlaced = (fileBuffer & 0x40) >> 6;
             if (fileBuffer >> 7 == 1) {

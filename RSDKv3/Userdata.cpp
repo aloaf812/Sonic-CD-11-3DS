@@ -61,25 +61,58 @@ int saveRAM[SAVEDATA_MAX];
 Achievement achievements[ACHIEVEMENT_MAX];
 LeaderboardEntry leaderboard[LEADERBOARD_MAX];
 
+#if RETRO_PLATFORM == RETRO_OSX
+#include <sys/stat.h>
+#include <sys/types.h>
+#endif
+
 int controlMode = -1;
 bool disableTouchControls = false;
 
-ModInfo modList[MOD_MAX];
-int modCount = 0;
+#if RETRO_USE_MOD_LOADER
+std::vector<ModInfo> modList;
 bool forceUseScripts = false;
+#endif
 
 void InitUserdata()
 {
     // userdata files are loaded from this directory
-    sprintf(gamePath, BASE_PATH);
-    sprintf(modsPath, BASE_PATH);
+    sprintf(gamePath, "%s", BASE_PATH);
+    sprintf(modsPath, "%s", BASE_PATH);
+    
+#if RETRO_PLATFORM == RETRO_OSX
+    sprintf(gamePath, "%s/RSDKv3", getResourcesPath());
+    sprintf(modsPath, "%s/RSDKv3/", getResourcesPath());
+    
+    mkdir(gamePath, 0777);
+#elif RETRO_PLATFORM == RETRO_ANDROID
+    {
+        char buffer[0x200];
+
+        JNIEnv *env      = (JNIEnv *)SDL_AndroidGetJNIEnv();
+        jobject activity = (jobject)SDL_AndroidGetActivity();
+        jclass cls(env->GetObjectClass(activity));
+        jmethodID method = env->GetMethodID(cls, "getBasePath", "()Ljava/lang/String;");
+        auto ret         = env->CallObjectMethod(activity, method);
+
+        strcpy(buffer, env->GetStringUTFChars((jstring)ret, NULL));
+
+        sprintf(gamePath, "%s", buffer);
+        sprintf(modsPath, "%s", buffer);
+
+        env->DeleteLocalRef(activity);
+        env->DeleteLocalRef(cls);
+    }
+#endif
 
     char buffer[0x200];
-#if RETRO_PLATFORM == RETRO_OSX || RETRO_PLATFORM == RETRO_UWP
+#if RETRO_PLATFORM == RETRO_UWP
     if (!usingCWD)
         sprintf(buffer, "%s/settings.ini", getResourcesPath());
     else
         sprintf(buffer, "%ssettings.ini", gamePath);
+#elif RETRO_PLATFORM == RETRO_OSX || RETRO_PLATFORM == RETRO_ANDROID
+    sprintf(buffer, "%s/settings.ini", gamePath);
 #elif RETRO_PLATFORM == RETRO_iOS
     sprintf(buffer, "%s/settings.ini", getDocumentsPath());
 #else
@@ -102,7 +135,6 @@ void InitUserdata()
         ini->SetBool("Window", "FullScreen", Engine.startFullScreen = DEFAULT_FULLSCREEN);
         ini->SetBool("Window", "Borderless", Engine.borderless = false);
         ini->SetBool("Window", "VSync", Engine.vsync = false);
-        ini->SetBool("Window", "EnhancedScaling", Engine.enhancedScaling = true);
         ini->SetInteger("Window", "WindowScale", Engine.windowScale = 2);
         ini->SetInteger("Window", "ScreenWidth", SCREEN_XSIZE = DEFAULT_SCREEN_XSIZE);
         ini->SetInteger("Window", "RefreshRate", Engine.refreshRate = 60);
@@ -130,6 +162,11 @@ void InitUserdata()
         ini->SetInteger("Controller 1", "B", inputDevice[5].contMappings = SDL_CONTROLLER_BUTTON_B);
         ini->SetInteger("Controller 1", "C", inputDevice[6].contMappings = SDL_CONTROLLER_BUTTON_X);
         ini->SetInteger("Controller 1", "Start", inputDevice[7].contMappings = SDL_CONTROLLER_BUTTON_START);
+
+        ini->SetFloat("Controller 1", "LStickDeadzone", LSTICK_DEADZONE = 0.3);
+        ini->SetFloat("Controller 1", "RStickDeadzone", RSTICK_DEADZONE = 0.3);
+        ini->SetFloat("Controller 1", "LTriggerDeadzone", LTRIGGER_DEADZONE = 0.3);
+        ini->SetFloat("Controller 1", "RTriggerDeadzone", RTRIGGER_DEADZONE = 0.3);
         #endif
 
         ini->Write(BASE_PATH"settings.ini");
@@ -138,7 +175,6 @@ void InitUserdata()
         fClose(file);
 		delete[] ini;
         ini = new IniParser(BASE_PATH"settings.ini");
-
         if (!ini->GetBool("Dev", "DevMenu", &Engine.devMenu))
             Engine.devMenu = false;
         if (!ini->GetBool("Dev", "EngineDebugMode", &engineDebugMode))
@@ -181,7 +217,11 @@ void InitUserdata()
             SCREEN_XSIZE = DEFAULT_SCREEN_XSIZE;
         if (!ini->GetInteger("Window", "RefreshRate", &Engine.refreshRate))
             Engine.refreshRate = 60;
-        #endif
+        if (!ini->GetInteger("Window", "DimLimit", &Engine.dimLimit))
+            Engine.dimLimit = 300; //5 mins
+        if (Engine.dimLimit >= 0)
+            Engine.dimLimit *= Engine.refreshRate;
+#endif
 
         float bv = 0, sv = 0;
         if (!ini->GetFloat("Audio", "BGMVolume", &bv))
@@ -236,6 +276,15 @@ void InitUserdata()
             inputDevice[6].contMappings = SDL_CONTROLLER_BUTTON_X;
         if (!ini->GetInteger("Controller 1", "Start", &inputDevice[INPUT_START].contMappings))
             inputDevice[7].contMappings = SDL_CONTROLLER_BUTTON_START;
+
+        if (!ini.GetFloat("Controller 1", "LStickDeadzone", &LSTICK_DEADZONE))
+            LSTICK_DEADZONE = 0.3;
+        if (!ini.GetFloat("Controller 1", "RStickDeadzone", &RSTICK_DEADZONE))
+            RSTICK_DEADZONE = 0.3;
+        if (!ini.GetFloat("Controller 1", "LTriggerDeadzone", &LTRIGGER_DEADZONE))
+            LTRIGGER_DEADZONE = 0.3;
+        if (!ini.GetFloat("Controller 1", "RTriggerDeadzone", &RTRIGGER_DEADZONE))
+            RTRIGGER_DEADZONE = 0.3;
 #endif
 
 #if RETRO_USING_SDL1
@@ -272,17 +321,28 @@ void InitUserdata()
             inputDevice[6].contMappings = 7;
         if (!ini->GetInteger("Controller 1", "Start", &inputDevice[INPUT_START].contMappings))
             inputDevice[7].contMappings = 8;
+
+        if (!ini.GetFloat("Controller 1", "LStickDeadzone", &LSTICK_DEADZONE))
+            LSTICK_DEADZONE = 0.3;
+        if (!ini.GetFloat("Controller 1", "RStickDeadzone", &RSTICK_DEADZONE))
+            RSTICK_DEADZONE = 0.3;
+        if (!ini.GetFloat("Controller 1", "LTriggerDeadzone", &LTRIGGER_DEADZONE))
+            LTRIGGER_DEADZONE = 0.3;
+        if (!ini.GetFloat("Controller 1", "RTriggerDeadzone", &RTRIGGER_DEADZONE))
+            RTRIGGER_DEADZONE = 0.3;
 #endif
     }
 	delete[] ini;
     SetScreenSize(SCREEN_XSIZE, SCREEN_YSIZE);
 
     // Support for extra controller types SDL doesn't recognise
-#if RETRO_PLATFORM == RETRO_OSX || RETRO_PLATFORM == RETRO_UWP
+#if RETRO_PLATFORM == RETRO_UWP
     if (!usingCWD)
         sprintf(buffer, "%s/controllerdb.txt", getResourcesPath());
     else
         sprintf(buffer, "%scontrollerdb.txt", gamePath);
+#elif RETRO_PLATFORM == RETRO_OSX || RETRO_PLATFORM == RETRO_ANDROID
+    sprintf(buffer, "%s/controllerdb.txt", gamePath);
 #else
     sprintf(buffer, BASE_PATH "controllerdb.txt");
 #endif
@@ -300,11 +360,13 @@ void InitUserdata()
     }
 #endif
 
-#if RETRO_PLATFORM == RETRO_OSX || RETRO_PLATFORM == RETRO_UWP
+#if RETRO_PLATFORM == RETRO_UWP
     if (!usingCWD)
         sprintf(buffer, "%s/Udata.bin", getResourcesPath());
     else
         sprintf(buffer, "%sUdata.bin", gamePath);
+#elif RETRO_PLATFORM == RETRO_OSX || RETRO_PLATFORM == RETRO_ANDROID
+    sprintf(buffer, "%s/UData.bin", gamePath);
 #elif RETRO_PLATFORM == RETRO_iOS
     sprintf(buffer, "%s/UData.bin", getDocumentsPath());
 #else
@@ -427,7 +489,6 @@ void writeSettings() {
     ini->SetComment("Window", "VSComment", "Determines if VSync will be active or not");
     ini->SetBool("Window", "VSync", Engine.vsync);
     ini->SetComment("Window", "ESComment", "Determines if Enhanced Scaling will be active or not. Only affects non-multiple resolutions.");
-    ini->SetBool("Window", "EnhancedScaling", Engine.enhancedScaling);
     ini->SetComment("Window", "WSComment", "How big the window will be");
     ini->SetInteger("Window", "WindowScale", Engine.windowScale);
     ini->SetComment("Window", "SWComment", "How wide the base screen will be in pixels");
@@ -483,11 +544,13 @@ void writeSettings() {
 void ReadUserdata()
 {
     char buffer[0x200];
-#if RETRO_PLATFORM == RETRO_OSX || RETRO_PLATFORM == RETRO_UWP
+#if RETRO_PLATFORM == RETRO_UWP
     if (!usingCWD)
         sprintf(buffer, "%s/Udata.bin", getResourcesPath());
     else
         sprintf(buffer, "%sUdata.bin", gamePath);
+#elif RETRO_PLATFORM == RETRO_OSX
+    sprintf(buffer, "%s/UData.bin", gamePath);
 #else
     sprintf(buffer, "%sUdata.bin", gamePath);
 #endif
@@ -520,6 +583,8 @@ void WriteUserdata()
         sprintf(buffer, "%s/Udata.bin", getResourcesPath());
     else
         sprintf(buffer, "%sUdata.bin", gamePath);
+#elif RETRO_PLATFORM == RETRO_OSX
+    sprintf(buffer, "%s/UData.bin", gamePath);
 #else
     sprintf(buffer, "%sUdata.bin", gamePath);
 #endif
@@ -593,159 +658,293 @@ void SetLeaderboard(int leaderboardID, int result)
     }
 }
 
-// TODO: commented out so this can compile for now
-// will fix whenever
+#if RETRO_USE_MOD_LOADER
+#include <string>
+#include <filesystem>
 
-//#include <string>
-//#include "ghc/include/ghc/filesystem.hpp"
+#if RETRO_PLATFORM == RETRO_ANDROID
+namespace fs = std::__fs::filesystem;
+#else
+namespace fs = std::filesystem;
+#endif
 
 void initMods()
 {
-	/*
-    modCount        = 0;
+    modList.clear();
     forceUseScripts = false;
 
     char modBuf[0x100];
     sprintf(modBuf, "%smods/", modsPath);
-    ghc::filesystem::path modPath(modBuf);
+    fs::path modPath(modBuf);
 
-    if (ghc::filesystem::exists(modPath) && ghc::filesystem::is_directory(modPath)) {
+    if (fs::exists(modPath) && fs::is_directory(modPath)) {
+        std::string mod_config = modPath.string() + "/modconfig.ini";
+        FileIO *configFile     = fOpen(mod_config.c_str(), "r");
+        if (configFile) {
+            fClose(configFile);
+            IniParser modConfig(mod_config.c_str(), false);
+
+            for (int m = 0; m < modConfig.items.size(); ++m) {
+                bool active = false;
+                ModInfo info;
+                modConfig.GetBool("mods", modConfig.items[m].key, &active);
+                if (loadMod(&info, modPath.string(), modConfig.items[m].key, active))
+                    modList.push_back(info);
+            }
+        }
+
         try {
-            auto rdi = ghc::filesystem::directory_iterator(modPath);
+            auto rdi = fs::directory_iterator(modPath);
             for (auto de : rdi) {
                 if (de.is_directory()) {
-                    ghc::filesystem::path modDirPath = de.path();
+                    fs::path modDirPath = de.path();
 
-                    ModInfo *info = &modList[modCount];
+                    ModInfo info;
 
-                    char modName[0x100];
-                    info->active = false;
-
-                    std::string modDir            = modDirPath.c_str();
+                    std::string modDir            = modDirPath.string().c_str();
                     const std::string mod_inifile = modDir + "/mod.ini";
+                    std::string folder            = modDirPath.filename().string();
 
-                    FileIO *f = fOpen(mod_inifile.c_str(), "r");
-                    if (f) {
-                        fClose(f);
-                        IniParser modSettings(mod_inifile.c_str());
-
-                        info->name    = "Unnamed Mod";
-                        info->desc    = "";
-                        info->author  = "Unknown Author";
-                        info->version = "1.0.0";
-                        info->folder  = modDirPath.filename();
-
-                        char infoBuf[0x100];
-                        // Name
-                        StrCopy(infoBuf, "");
-                        modSettings.GetString("", "Name", infoBuf);
-                        if (!StrComp(infoBuf, ""))
-                            info->name = infoBuf;
-                        // Desc
-                        StrCopy(infoBuf, "");
-                        modSettings.GetString("", "Description", infoBuf);
-                        if (!StrComp(infoBuf, ""))
-                            info->desc = infoBuf;
-                        // Author
-                        StrCopy(infoBuf, "");
-                        modSettings.GetString("", "Author", infoBuf);
-                        if (!StrComp(infoBuf, ""))
-                            info->author = infoBuf;
-                        // Version
-                        StrCopy(infoBuf, "");
-                        modSettings.GetString("", "Version", infoBuf);
-                        if (!StrComp(infoBuf, ""))
-                            info->version = infoBuf;
-
-                        info->active = false;
-                        modSettings.GetBool("", "Active", &info->active);
-
-                        // Check for Data replacements
-                        ghc::filesystem::path dataPath(modDir + "/Data");
-
-                        if (ghc::filesystem::exists(dataPath) && ghc::filesystem::is_directory(dataPath)) {
-                            try {
-                                auto data_rdi = ghc::filesystem::recursive_directory_iterator(dataPath);
-                                for (auto data_de : data_rdi) {
-                                    if (data_de.is_regular_file()) {
-                                        char modBuf[0x100];
-                                        StrCopy(modBuf, data_de.path().c_str());
-                                        char folderTest[4][0x10] = {
-                                            "Data/",
-                                            "Data\\",
-                                            "data/",
-                                            "data\\",
-                                        };
-                                        int tokenPos = -1;
-                                        for (int i = 0; i < 4; ++i) {
-                                            tokenPos = FindStringToken(modBuf, folderTest[i], 1);
-                                            if (tokenPos >= 0)
-                                                break;
-                                        }
-
-                                        if (tokenPos >= 0) {
-                                            char buffer[0x80];
-                                            for (int i = StrLength(modBuf); i >= tokenPos; --i) {
-                                                buffer[i - tokenPos] = modBuf[i] == '\\' ? '/' : modBuf[i];
-                                            }
-
-                                            printLog(modBuf);
-                                            std::string path(buffer);
-                                            std::string modPath(modBuf);
-                                            info->fileMap.insert(std::pair<std::string, std::string>(path, modBuf));
-                                        }
-                                    }
-                                }
-                            } catch (ghc::filesystem::filesystem_error fe) {
-                                printLog("Data Folder Scanning Error: ");
-                                printLog(fe.what());
-                            }
+                    bool flag = true;
+                    for (int m = 0; m < modList.size(); ++m) {
+                        if (modList[m].folder == folder) {
+                            flag = false;
+                            break;
                         }
-
-                        info->useScripts = false;
-                        modSettings.GetBool("", "TxtScripts", &info->useScripts);
-                        if (info->useScripts && info->active)
-                            forceUseScripts = true;
                     }
-                    modCount++;
+
+                    if (flag) {
+                        if (loadMod(&info, modPath.string(), modDirPath.filename().string(), false))
+                            modList.push_back(info);
+                    }
                 }
             }
-        } catch (ghc::filesystem::filesystem_error fe) {
+        } catch (fs::filesystem_error fe) {
             printLog("Mods Folder Scanning Error: ");
             printLog(fe.what());
         }
     }
-*/
+}
+
+bool loadMod(ModInfo *info, std::string modsPath, std::string folder, bool active)
+{
+    if (!info)
+        return false;
+
+    info->fileMap.clear();
+    info->name    = "";
+    info->desc    = "";
+    info->author  = "";
+    info->version = "";
+    info->folder  = "";
+    info->active  = false;
+
+    const std::string modDir = modsPath + "/" + folder;
+
+    FileIO *f = fOpen((modDir + "/mod.ini").c_str(), "r");
+    if (f) {
+        fClose(f);
+        IniParser modSettings((modDir + "/mod.ini").c_str(), false);
+
+        info->name    = "Unnamed Mod";
+        info->desc    = "";
+        info->author  = "Unknown Author";
+        info->version = "1.0.0";
+        info->folder  = folder;
+
+        char infoBuf[0x100];
+        // Name
+        StrCopy(infoBuf, "");
+        modSettings.GetString("", "Name", infoBuf);
+        if (!StrComp(infoBuf, ""))
+            info->name = infoBuf;
+        // Desc
+        StrCopy(infoBuf, "");
+        modSettings.GetString("", "Description", infoBuf);
+        if (!StrComp(infoBuf, ""))
+            info->desc = infoBuf;
+        // Author
+        StrCopy(infoBuf, "");
+        modSettings.GetString("", "Author", infoBuf);
+        if (!StrComp(infoBuf, ""))
+            info->author = infoBuf;
+        // Version
+        StrCopy(infoBuf, "");
+        modSettings.GetString("", "Version", infoBuf);
+        if (!StrComp(infoBuf, ""))
+            info->version = infoBuf;
+
+        info->active = active;
+
+        // Check for Data/ replacements
+        fs::path dataPath(modDir + "/Data");
+
+        if (fs::exists(dataPath) && fs::is_directory(dataPath)) {
+            try {
+                auto data_rdi = fs::recursive_directory_iterator(dataPath);
+                for (auto data_de : data_rdi) {
+                    if (data_de.is_regular_file()) {
+                        char modBuf[0x100];
+                        StrCopy(modBuf, data_de.path().string().c_str());
+                        char folderTest[4][0x10] = {
+                            "Data/",
+                            "Data\\",
+                            "data/",
+                            "data\\",
+                        };
+                        int tokenPos = -1;
+                        for (int i = 0; i < 4; ++i) {
+                            tokenPos = FindStringToken(modBuf, folderTest[i], 1);
+                            if (tokenPos >= 0)
+                                break;
+                        }
+
+                        if (tokenPos >= 0) {
+                            char buffer[0x80];
+                            for (int i = StrLength(modBuf); i >= tokenPos; --i) {
+                                buffer[i - tokenPos] = modBuf[i] == '\\' ? '/' : modBuf[i];
+                            }
+
+                            // printLog(modBuf);
+                            std::string path(buffer);
+                            std::string modPath(modBuf);
+                            char pathLower[0x100];
+                            memset(pathLower, 0, sizeof(char) * 0x100);
+                            for (int c = 0; c < path.size(); ++c) {
+                                pathLower[c] = tolower(path.c_str()[c]);
+                            }
+
+                            info->fileMap.insert(std::pair<std::string, std::string>(pathLower, modBuf));
+                        }
+                    }
+                }
+            } catch (fs::filesystem_error fe) {
+                printLog("Data Folder Scanning Error: ");
+                printLog(fe.what());
+            }
+        }
+
+        // Check for Scripts/ replacements
+        fs::path scriptPath(modDir + "/Scripts");
+
+        if (fs::exists(scriptPath) && fs::is_directory(scriptPath)) {
+            try {
+                auto data_rdi = fs::recursive_directory_iterator(scriptPath);
+                for (auto data_de : data_rdi) {
+                    if (data_de.is_regular_file()) {
+                        char modBuf[0x100];
+                        StrCopy(modBuf, data_de.path().string().c_str());
+                        char folderTest[4][0x10] = {
+                            "Scripts/",
+                            "Scripts\\",
+                            "scripts/",
+                            "scripts\\",
+                        };
+                        int tokenPos = -1;
+                        for (int i = 0; i < 4; ++i) {
+                            tokenPos = FindStringToken(modBuf, folderTest[i], 1);
+                            if (tokenPos >= 0)
+                                break;
+                        }
+
+                        if (tokenPos >= 0) {
+                            char buffer[0x80];
+                            for (int i = StrLength(modBuf); i >= tokenPos; --i) {
+                                buffer[i - tokenPos] = modBuf[i] == '\\' ? '/' : modBuf[i];
+                            }
+
+                            // printLog(modBuf);
+                            std::string path(buffer);
+                            std::string modPath(modBuf);
+                            char pathLower[0x100];
+                            memset(pathLower, 0, sizeof(char) * 0x100);
+                            for (int c = 0; c < path.size(); ++c) {
+                                pathLower[c] = tolower(path.c_str()[c]);
+                            }
+
+                            info->fileMap.insert(std::pair<std::string, std::string>(pathLower, modBuf));
+                        }
+                    }
+                }
+            } catch (fs::filesystem_error fe) {
+                printLog("Script Folder Scanning Error: ");
+                printLog(fe.what());
+            }
+        }
+
+        // Check for Bytecode/ replacements
+        fs::path bytecodePath(modDir + "/Videos");
+
+        if (fs::exists(bytecodePath) && fs::is_directory(bytecodePath)) {
+            try {
+                auto data_rdi = fs::recursive_directory_iterator(bytecodePath);
+                for (auto data_de : data_rdi) {
+                    if (data_de.is_regular_file()) {
+                        char modBuf[0x100];
+                        StrCopy(modBuf, data_de.path().string().c_str());
+                        char folderTest[4][0x10] = {
+                            "Videos/",
+                            "Videos\\",
+                            "videos/",
+                            "videos\\",
+                        };
+                        int tokenPos = -1;
+                        for (int i = 0; i < 4; ++i) {
+                            tokenPos = FindStringToken(modBuf, folderTest[i], 1);
+                            if (tokenPos >= 0)
+                                break;
+                        }
+
+                        if (tokenPos >= 0) {
+                            char buffer[0x80];
+                            for (int i = StrLength(modBuf); i >= tokenPos; --i) {
+                                buffer[i - tokenPos] = modBuf[i] == '\\' ? '/' : modBuf[i];
+                            }
+
+                            // printLog(modBuf);
+                            std::string path(buffer);
+                            std::string modPath(modBuf);
+                            char pathLower[0x100];
+                            memset(pathLower, 0, sizeof(char) * 0x100);
+                            for (int c = 0; c < path.size(); ++c) {
+                                pathLower[c] = tolower(path.c_str()[c]);
+                            }
+
+                            info->fileMap.insert(std::pair<std::string, std::string>(pathLower, modBuf));
+                        }
+                    }
+                }
+            } catch (fs::filesystem_error fe) {
+                printLog("Videos Folder Scanning Error: ");
+                printLog(fe.what());
+            }
+        }
+
+        info->useScripts = false;
+        modSettings.GetBool("", "TxtScripts", &info->useScripts);
+        if (info->useScripts && info->active)
+            forceUseScripts = true;
+        return true;
+    }
+    return false;
 }
 void saveMods()
 {
-	/*
     char modBuf[0x100];
     sprintf(modBuf, "%smods/", modsPath);
-    ghc::filesystem::path modPath(modBuf);
+    fs::path modPath(modBuf);
 
-    if (ghc::filesystem::exists(modPath) && ghc::filesystem::is_directory(modPath)) {
-        for (int m = 0; m < modCount; ++m) {
-            ModInfo *info                 = &modList[m];
-            std::string modDir            = modPath.c_str();
-            const std::string mod_inifile = modDir + info->folder + "/mod.ini";
+    if (fs::exists(modPath) && fs::is_directory(modPath)) {
+        std::string mod_config = modPath.string() + "/modconfig.ini";
+        IniParser modConfig;
 
-            FileIO *f = fOpen(mod_inifile.c_str(), "w");
-            if (f) {
-                fClose(f);
-                IniParser modSettings;
+        for (int m = 0; m < modList.size(); ++m) {
+            ModInfo *info = &modList[m];
 
-                modSettings.SetString("", "Name", (char *)info->name.c_str());
-                modSettings.SetString("", "Description", (char *)info->desc.c_str());
-                modSettings.SetString("", "Author", (char *)info->author.c_str());
-                modSettings.SetString("", "Version", (char *)info->version.c_str());
-                if (info->useScripts)
-                    modSettings.SetBool("", "TxtScripts", info->useScripts);
-                modSettings.SetBool("", "Active", info->active);
-
-                modSettings.Write(mod_inifile.c_str());
-            }
+            modConfig.SetBool("mods", info->folder.c_str(), info->active);
         }
+
+        modConfig.Write(mod_config.c_str(), false);
     }
-    */
 }
+#endif

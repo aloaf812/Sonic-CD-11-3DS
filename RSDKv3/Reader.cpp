@@ -17,22 +17,30 @@ byte eStringNo;
 byte eNybbleSwap;
 char encryptionStringA[] = { "4RaS9D7KaEbxcp2o5r6t" };
 char encryptionStringB[] = { "3tRaUxLmEaSn" };
+#if RETRO_USE_MOD_LOADER
 byte isModdedFile        = false;
+#endif
 
 FileIO *cFileHandle = nullptr;
 
 bool CheckRSDKFile(const char *filePath)
 {
     FileInfo info;
+    
+    char filePathBuffer[0x100];
+    sprintf(filePathBuffer, "%s", filePath);
+#if RETRO_PLATFORM == RETRO_OSX || RETRO_PLATFORM == RETRO_ANDROID
+    sprintf(filePathBuffer, "%s/%s", gamePath, filePath);
+#endif
 
     Engine.usingDataFile = false;
     Engine.usingDataFileStore = false;
     Engine.usingBytecode = false;
 
-    cFileHandle = fOpen(filePath, "rb");
+    cFileHandle = fOpen(filePathBuffer, "rb");
     if (cFileHandle) {
         Engine.usingDataFile = true;
-        StrCopy(rsdkName, filePath);
+        StrCopy(rsdkName, filePathBuffer);
         fClose(cFileHandle);
         cFileHandle = NULL;
         if (LoadFile("Data/Scripts/ByteCode/GlobalCode.bin", &info)) {
@@ -88,23 +96,36 @@ bool LoadFile(const char *filePath, FileInfo *fileInfo)
     char filePathBuf[0x100];
     StrCopy(filePathBuf, filePath);
 
+
     if (Engine.forceFolder)
         Engine.usingDataFile = Engine.usingDataFileStore;
     Engine.forceFolder = false;
 
     Engine.usingDataFileStore = Engine.usingDataFile;
 
+#if RETRO_USE_MOD_LOADER
     fileInfo->isMod = false;
     isModdedFile    = false;
-    for (int m = 0; m < modCount; ++m) {
+#endif
+    bool addPath = true;
+    // Fixes ".ani" ".Ani" bug and any other case differences
+    char pathLower[0x100];
+    memset(pathLower, 0, sizeof(char) * 0x100);
+    for (int c = 0; c < strlen(filePathBuf); ++c) {
+        pathLower[c] = tolower(filePathBuf[c]);
+    }
+
+#if RETRO_USE_MOD_LOADER
+    for (int m = 0; m < modList.size(); ++m) {
         if (modList[m].active) {
-            std::map<std::string, std::string>::const_iterator iter = modList[m].fileMap.find(filePathBuf);
+            std::map<std::string, std::string>::const_iterator iter = modList[m].fileMap.find(pathLower);
             if (iter != modList[m].fileMap.cend()) {
                 StrCopy(filePathBuf, iter->second.c_str());
                 Engine.forceFolder   = true;
                 Engine.usingDataFile = false;
                 fileInfo->isMod      = true;
                 isModdedFile         = true;
+                addPath = false;
                 break;
             }
         }
@@ -117,14 +138,24 @@ bool LoadFile(const char *filePath, FileInfo *fileInfo)
             Engine.usingDataFile = false;
             fileInfo->isMod      = true;
             isModdedFile         = true;
+            addPath = false;
             std::string fStr     = std::string(filePathBuf);
             fStr.erase(fStr.begin(), fStr.begin() + 5); // remove "Data/"
             StrCopy(filePathBuf, fStr.c_str());
         }
     }
-
-    StrCopy(fileInfo->fileName, filePathBuf);
-    StrCopy(fileName, filePathBuf);
+#endif
+    
+#if RETRO_PLATFORM == RETRO_OSX || RETRO_PLATFORM == RETRO_ANDROID
+    if (addPath) {
+        char pathBuf[0x100];
+        sprintf(pathBuf, "%s/%s", gamePath, filePathBuf);
+        sprintf(filePathBuf, "%s", pathBuf);
+    }
+#endif
+    
+    StrCopy(fileInfo->fileName, "");
+    StrCopy(fileName, "");
 
     if (Engine.usingDataFile && !Engine.forceFolder) {
         cFileHandle = fOpen(rsdkName, "rb");
@@ -133,10 +164,13 @@ bool LoadFile(const char *filePath, FileInfo *fileInfo)
         bufferPosition = 0;
         readSize       = 0;
         readPos        = 0;
+        
+        StrCopy(fileInfo->fileName, filePath);
+        StrCopy(fileName, filePath);
         if (!ParseVirtualFileSystem(fileInfo)) {
             fClose(cFileHandle);
             cFileHandle = NULL;
-            printLog("Couldn't load file '%s'", filePathBuf);
+            printLog("Couldn't load file '%s'", filePath);
             return false;
         }
         fileInfo->readPos           = readPos;
@@ -149,11 +183,16 @@ bool LoadFile(const char *filePath, FileInfo *fileInfo)
         fileInfo->bufferPosition    = bufferPosition;
     }
     else {
+        StrCopy(fileInfo->fileName, filePathBuf);
+        StrCopy(fileName, filePathBuf);
         cFileHandle = fOpen(fileInfo->fileName, "rb");
         if (!cFileHandle) {
             printLog("Couldn't load file '%s'", filePathBuf);
             return false;
         }
+        
+        StrCopy(fileInfo->fileName, filePathBuf);
+        StrCopy(fileName, filePathBuf);
         virtualFileOffset = 0;
         fSeek(cFileHandle, 0, SEEK_END);
         fileInfo->fileSize = (int)fTell(cFileHandle);
@@ -409,14 +448,20 @@ void FileRead(void *dest, int size)
 void SetFileInfo(FileInfo *fileInfo)
 {
     Engine.forceFolder = false;
+#if RETRO_USE_MOD_LOADER
     if (!fileInfo->isMod) {
+#endif
         Engine.usingDataFile = Engine.usingDataFileStore;
+#if RETRO_USE_MOD_LOADER
     }
     else {
         Engine.forceFolder   = true;
     }
+#endif
 
+#if RETRO_USE_MOD_LOADER
     isModdedFile = fileInfo->isMod;
+#endif
     if (Engine.usingDataFile && !Engine.forceFolder) {
         cFileHandle       = fOpen(rsdkName, "rb");
         virtualFileOffset = fileInfo->virtualFileOffset;
@@ -525,17 +570,29 @@ bool LoadFile2(const char *filePath, FileInfo *fileInfo)
 
     Engine.usingDataFileStore = Engine.usingDataFile;
 
+#if RETRO_USE_MOD_LOADER
     fileInfo->isMod = false;
     isModdedFile    = false;
-    for (int m = 0; m < modCount; ++m) {
+#endif
+    bool addPath = true;
+    //Fixes ".ani" ".Ani" bug and any other case differences
+    char pathLower[0x100];
+    memset(pathLower, 0, sizeof(char) * 0x100);
+    for (int c = 0; c < strlen(filePathBuf); ++c) {
+        pathLower[c] = tolower(filePathBuf[c]);
+    }
+
+#if RETRO_USE_MOD_LOADER
+    for (int m = 0; m < modList.size(); ++m) {
         if (modList[m].active) {
-            std::map<std::string, std::string>::const_iterator iter = modList[m].fileMap.find(filePathBuf);
+            std::map<std::string, std::string>::const_iterator iter = modList[m].fileMap.find(pathLower);
             if (iter != modList[m].fileMap.cend()) {
                 StrCopy(filePathBuf, iter->second.c_str());
                 Engine.forceFolder   = true;
                 Engine.usingDataFile = false;
                 fileInfo->isMod      = true;
                 isModdedFile         = true;
+                addPath = false;
                 break;
             }
         }
@@ -547,13 +604,23 @@ bool LoadFile2(const char *filePath, FileInfo *fileInfo)
             Engine.usingDataFile = false;
             fileInfo->isMod      = true;
             isModdedFile         = true;
+            addPath = false;
             std::string fStr     = std::string(filePathBuf);
             fStr.erase(fStr.begin(), fStr.begin() + 5); // remove "Data/"
             StrCopy(filePathBuf, fStr.c_str());
         }
     }
+#endif
+    
+#if RETRO_PLATFORM == RETRO_OSX || RETRO_PLATFORM == RETRO_ANDROID
+    if (addPath) {
+        char pathBuf[0x100];
+        sprintf(pathBuf, "%s/%s", gamePath, filePathBuf);
+        sprintf(filePathBuf, "%s", pathBuf);
+    }
+#endif
 
-    StrCopy(fileInfo->fileName, filePathBuf);
+    StrCopy(fileInfo->fileName, "");
 
     if (Engine.usingDataFile && !Engine.forceFolder) {
         fileInfo->cFileHandle = fOpen(rsdkName, "rb");
@@ -561,21 +628,28 @@ bool LoadFile2(const char *filePath, FileInfo *fileInfo)
         fileInfo->fileSize       = (int)fTell(fileInfo->cFileHandle);
 	fileInfo->vFileSize      = fileInfo->fileSize;
         fileInfo->bufferPosition = 0;
-        //readSize       = 0;
         fileInfo->readPos = 0;
+        StrCopy(fileInfo->fileName, filePath);
         if (!ParseVirtualFileSystem2(fileInfo)) {
             fClose(fileInfo->cFileHandle);
             fileInfo->cFileHandle = NULL;
-            printLog("Couldn't load file '%s'", filePathBuf);
+            printLog("Couldn't load file '%s'", filePath);
             return false;
         }
+        fileInfo->fileBuffer = (byte*)malloc(fileInfo->vFileSize);
+        FileRead2(fileInfo, fileInfo->fileBuffer, fileInfo->vFileSize, false);
+        fileInfo->readPos        = 0;
+        fileInfo->bufferPosition = 0;
+        fClose(fileInfo->cFileHandle);
     }
     else {
+        StrCopy(fileInfo->fileName, filePathBuf);
         fileInfo->cFileHandle = fOpen(fileInfo->fileName, "rb");
         if (!fileInfo->cFileHandle) {
             printLog("Couldn't load file '%s'", filePathBuf);
             return false;
         }
+        StrCopy(fileInfo->fileName, filePathBuf);
         fSeek(fileInfo->cFileHandle, 0, SEEK_END);
         fileInfo->vFileSize = (int)fTell(fileInfo->cFileHandle);
         fileInfo->fileSize  = fileInfo->vFileSize;
@@ -588,9 +662,13 @@ bool LoadFile2(const char *filePath, FileInfo *fileInfo)
         fileInfo->eStringPosA       = 0;
         fileInfo->eNybbleSwap       = 0;
         fileInfo->bufferPosition    = 0;
+        fileInfo->fileBuffer        = (byte *)malloc(fileInfo->vFileSize);
+        FileRead2(fileInfo, fileInfo->fileBuffer, fileInfo->vFileSize, false);
+        fileInfo->readPos = 0;
+        fileInfo->bufferPosition = 0;
+        fClose(fileInfo->cFileHandle);
     }
     fileInfo->bufferPosition = 0;
-    //fileInfo->readSize       = 0;
 
     printLog("Loaded File '%s'", filePathBuf);
 
@@ -632,39 +710,39 @@ bool ParseVirtualFileSystem2(FileInfo *fileInfo)
     //readSize             = 0;
     fileInfo->readPos              = 0;
 
-    FileRead2(fileInfo, &fileBuffer, 1);
+    FileRead2(fileInfo, &fileBuffer, 1, false);
     headerSize = fileBuffer;
-    FileRead2(fileInfo, &fileBuffer, 1);
+    FileRead2(fileInfo, &fileBuffer, 1, false);
     headerSize += fileBuffer << 8;
-    FileRead2(fileInfo, &fileBuffer, 1);
+    FileRead2(fileInfo, &fileBuffer, 1, false);
     headerSize += fileBuffer << 16;
-    FileRead2(fileInfo, &fileBuffer, 1);
+    FileRead2(fileInfo, &fileBuffer, 1, false);
     headerSize += fileBuffer << 24;
 
-    FileRead2(fileInfo, &fileBuffer, 1);
+    FileRead2(fileInfo, &fileBuffer, 1, false);
     dirCount = fileBuffer;
-    FileRead2(fileInfo, &fileBuffer, 1);
+    FileRead2(fileInfo, &fileBuffer, 1, false);
     dirCount += fileBuffer << 8;
 
     i                  = 0;
     fileOffset         = 0;
     int nextFileOffset = 0;
     while (i < dirCount) {
-        FileRead2(fileInfo, &fileBuffer, 1);
+        FileRead2(fileInfo, &fileBuffer, 1, false);
         for (j = 0; j < fileBuffer; ++j) {
-            FileRead2(fileInfo, &stringBuffer[j], 1);
+            FileRead2(fileInfo, &stringBuffer[j], 1, false);
             stringBuffer[j] ^= -1 - fileBuffer;
         }
         stringBuffer[j] = 0;
 
         if (StrComp(fullFilename, stringBuffer)) {
-            FileRead2(fileInfo, &fileBuffer, 1);
+            FileRead2(fileInfo, &fileBuffer, 1, false);
             fileOffset = fileBuffer;
-            FileRead2(fileInfo, &fileBuffer, 1);
+            FileRead2(fileInfo, &fileBuffer, 1, false);
             fileOffset += fileBuffer << 8;
-            FileRead2(fileInfo, &fileBuffer, 1);
+            FileRead2(fileInfo, &fileBuffer, 1, false);
             fileOffset += fileBuffer << 16;
-            FileRead2(fileInfo, &fileBuffer, 1);
+            FileRead2(fileInfo, &fileBuffer, 1, false);
             fileOffset += fileBuffer << 24;
 
             // Grab info for next dir to know when we've found an error
@@ -673,20 +751,20 @@ bool ParseVirtualFileSystem2(FileInfo *fileInfo)
                 nextFileOffset = fileSize - headerSize; // There is no next dir, so just make this the EOF
             }
             else {
-                FileRead2(fileInfo, &fileBuffer, 1);
+                FileRead2(fileInfo, &fileBuffer, 1, false);
                 for (j = 0; j < fileBuffer; ++j) {
-                    FileRead2(fileInfo, &stringBuffer[j], 1);
+                    FileRead2(fileInfo, &stringBuffer[j], 1, false);
                     stringBuffer[j] ^= -1 - fileBuffer;
                 }
                 stringBuffer[j] = 0;
 
-                FileRead2(fileInfo, &fileBuffer, 1);
+                FileRead2(fileInfo, &fileBuffer, 1, false);
                 nextFileOffset = fileBuffer;
-                FileRead2(fileInfo, &fileBuffer, 1);
+                FileRead2(fileInfo, &fileBuffer, 1, false);
                 nextFileOffset += fileBuffer << 8;
-                FileRead2(fileInfo, &fileBuffer, 1);
+                FileRead2(fileInfo, &fileBuffer, 1, false);
                 nextFileOffset += fileBuffer << 16;
-                FileRead2(fileInfo, &fileBuffer, 1);
+                FileRead2(fileInfo, &fileBuffer, 1, false);
                 nextFileOffset += fileBuffer << 24;
             }
 
@@ -694,10 +772,10 @@ bool ParseVirtualFileSystem2(FileInfo *fileInfo)
         }
         else {
             fileOffset = -1;
-            FileRead2(fileInfo, &fileBuffer, 1);
-            FileRead2(fileInfo, &fileBuffer, 1);
-            FileRead2(fileInfo, &fileBuffer, 1);
-            FileRead2(fileInfo, &fileBuffer, 1);
+            FileRead2(fileInfo, &fileBuffer, 1, false);
+            FileRead2(fileInfo, &fileBuffer, 1, false);
+            FileRead2(fileInfo, &fileBuffer, 1, false);
+            FileRead2(fileInfo, &fileBuffer, 1, false);
             ++i;
         }
     }
@@ -714,11 +792,11 @@ bool ParseVirtualFileSystem2(FileInfo *fileInfo)
         fileInfo->virtualFileOffset = fileOffset + headerSize;
         i                 = 0;
         while (i < 1) {
-            FileRead2(fileInfo, &fileBuffer, 1);
+            FileRead2(fileInfo, &fileBuffer, 1, false);
             ++fileInfo->virtualFileOffset;
             j = 0;
             while (j < fileBuffer) {
-                FileRead2(fileInfo, &stringBuffer[j], 1);
+                FileRead2(fileInfo, &stringBuffer[j], 1, false);
                 stringBuffer[j] = ~stringBuffer[j];
                 ++j;
                 ++fileInfo->virtualFileOffset;
@@ -727,25 +805,25 @@ bool ParseVirtualFileSystem2(FileInfo *fileInfo)
 
             if (StrComp(filename, stringBuffer)) {
                 i = 1;
-                FileRead2(fileInfo, &fileBuffer, 1);
+                FileRead2(fileInfo, &fileBuffer, 1, false);
                 j = fileBuffer;
-                FileRead2(fileInfo, &fileBuffer, 1);
+                FileRead2(fileInfo, &fileBuffer, 1, false);
                 j += fileBuffer << 8;
-                FileRead2(fileInfo, &fileBuffer, 1);
+                FileRead2(fileInfo, &fileBuffer, 1, false);
                 j += fileBuffer << 16;
-                FileRead2(fileInfo, &fileBuffer, 1);
+                FileRead2(fileInfo, &fileBuffer, 1, false);
                 j += fileBuffer << 24;
                 fileInfo->virtualFileOffset += 4;
                 fileInfo->vFileSize = j;
             }
             else {
-                FileRead2(fileInfo, &fileBuffer, 1);
+                FileRead2(fileInfo, &fileBuffer, 1, false);
                 j = fileBuffer;
-                FileRead2(fileInfo, &fileBuffer, 1);
+                FileRead2(fileInfo, &fileBuffer, 1, false);
                 j += fileBuffer << 8;
-                FileRead2(fileInfo, &fileBuffer, 1);
+                FileRead2(fileInfo, &fileBuffer, 1, false);
                 j += fileBuffer << 16;
-                FileRead2(fileInfo, &fileBuffer, 1);
+                FileRead2(fileInfo, &fileBuffer, 1, false);
                 j += fileBuffer << 24;
                 fileInfo->virtualFileOffset += 4;
                 fileInfo->virtualFileOffset += j;
@@ -772,123 +850,85 @@ bool ParseVirtualFileSystem2(FileInfo *fileInfo)
     return false;
 }
 
-size_t FileRead2(FileInfo *info, void *dest, int size)
+size_t FileRead2(FileInfo *info, void *dest, int size, bool fromBuffer)
 {
     byte *data = (byte *)dest;
     int rPos   = (int)GetFilePosition2(info);
     memset(data, 0, size);
 
-    if (rPos <= info->fileSize) {
-        if (Engine.usingDataFile && !Engine.forceFolder) {
-            int rSize = 0;
-            if (rPos + size <= info->fileSize)
-                rSize = size;
-            else
-                rSize = info->fileSize - rPos;
+    if (fromBuffer) {
+        if (info->readPos + size >= info->vFileSize)
+            size = info->vFileSize - info->readPos;
+        memcpy(dest, &info->fileBuffer[info->readPos], size);
+        info->readPos += size;
+        info->bufferPosition = 0;
+        return size;
+    }
+    else {
+        if (rPos <= info->fileSize) {
+            if (Engine.usingDataFile && !Engine.forceFolder) {
+                int rSize = 0;
+                if (rPos + size <= info->fileSize)
+                    rSize = size;
+                else
+                    rSize = info->fileSize - rPos;
 
-            size_t result = fRead(data, 1u, rSize, info->cFileHandle);
-            info->readPos += rSize;
-            info->bufferPosition = 0;
+                size_t result = fRead(data, 1, rSize, info->cFileHandle);
+                info->readPos += rSize;
+                info->bufferPosition = 0;
 
-            while (size > 0) {
-                *data = encryptionStringB[info->eStringPosB] ^ info->eStringNo ^ *data;
-                if (info->eNybbleSwap)
-                    *data = 16 * (*data & 0xF) + (*data >> 4);
-                *data ^= encryptionStringA[info->eStringPosA++];
-                ++info->eStringPosB;
-                if (info->eStringPosA <= 19 || info->eStringPosB <= 11) {
-                    if (info->eStringPosA > 19) {
-                        info->eStringPosA = 1;
-                        info->eNybbleSwap ^= 1u;
-                    }
-                    if (info->eStringPosB > 11) {
-                        info->eStringPosB = 1;
-                        info->eNybbleSwap ^= 1u;
-                    }
-                }
-                else {
-                    ++info->eStringNo;
-                    info->eStringNo &= 0x7Fu;
-                    if (info->eNybbleSwap) {
-                        info->eNybbleSwap = false;
-                        info->eStringPosA = (info->eStringNo % 12) + 6;
-                        info->eStringPosB = (info->eStringNo % 5) + 4;
+                while (size > 0) {
+                    *data = encryptionStringB[info->eStringPosB] ^ info->eStringNo ^ *data;
+                    if (info->eNybbleSwap)
+                        *data = 16 * (*data & 0xF) + (*data >> 4);
+                    *data ^= encryptionStringA[info->eStringPosA++];
+
+                    ++info->eStringPosB;
+                    if (info->eStringPosA <= 19 || info->eStringPosB <= 11) {
+                        if (info->eStringPosA > 19) {
+                            info->eStringPosA = 1;
+                            info->eNybbleSwap ^= 1;
+                        }
+                        if (info->eStringPosB > 11) {
+                            info->eStringPosB = 1;
+                            info->eNybbleSwap ^= 1;
+                        }
                     }
                     else {
-                        info->eNybbleSwap = true;
-                        info->eStringPosA = (info->eStringNo % 15) + 3;
-                        info->eStringPosB = (info->eStringNo % 7) + 1;
+                        ++info->eStringNo;
+                        info->eStringNo &= 0x7F;
+                        if (info->eNybbleSwap) {
+                            info->eNybbleSwap = false;
+                            info->eStringPosA = (info->eStringNo % 12) + 6;
+                            info->eStringPosB = (info->eStringNo % 5) + 4;
+                        }
+                        else {
+                            info->eNybbleSwap = true;
+                            info->eStringPosA = (info->eStringNo % 15) + 3;
+                            info->eStringPosB = (info->eStringNo % 7) + 1;
+                        }
                     }
+                    ++data;
+                    --size;
                 }
-                ++data;
-                --size;
+                return result;
             }
-            return result;
-        }
-        else {
-            int rSize = 0;
-            if (rPos + size <= info->fileSize)
-                rSize = size;
-            else
-                rSize = info->fileSize - rPos;
+            else {
+                int rSize = 0;
+                if (rPos + size <= info->fileSize)
+                    rSize = size;
+                else
+                    rSize = info->fileSize - rPos;
 
-            size_t result = fRead(data, 1u, rSize, info->cFileHandle);
-            info->readPos += rSize;
-            info->bufferPosition = 0;
-            return result;
+                size_t result = fRead(data, 1u, rSize, info->cFileHandle);
+                info->readPos += rSize;
+                info->bufferPosition = 0;
+                return result;
+            }
         }
     }
     return 0;
 }
 
-size_t GetFilePosition2(FileInfo* info)
-{
-    if (Engine.usingDataFile)
-        return info->bufferPosition + info->readPos - info->virtualFileOffset;
-    else
-        return info->bufferPosition + info->readPos;
-}
-
-void SetFilePosition2(FileInfo *info, int newPos)
-{
-    if (Engine.usingDataFile) {
-        info->readPos     = info->virtualFileOffset + newPos;
-        info->eStringNo   = (info->vFileSize & 0x1FCu) >> 2;
-        info->eStringPosB = (info->eStringNo % 9) + 1;
-        info->eStringPosA = (info->eStringNo % info->eStringPosB) + 1;
-        info->eNybbleSwap = false;
-        while (newPos) {
-            ++info->eStringPosA;
-            ++info->eStringPosB;
-            if (info->eStringPosA <= 19 || info->eStringPosB <= 11) {
-                if (info->eStringPosA > 19) {
-                    info->eStringPosA = 1;
-                    info->eNybbleSwap ^= 1u;
-                }
-                if (info->eStringPosB > 11) {
-                    info->eStringPosB = 1;
-                    info->eNybbleSwap ^= 1u;
-                }
-            }
-            else {
-                ++info->eStringNo;
-                info->eStringNo &= 0x7Fu;
-                if (info->eNybbleSwap) {
-                    info->eNybbleSwap = false;
-                    info->eStringPosA = (info->eStringNo % 12) + 6;
-                    info->eStringPosB = (info->eStringNo % 5) + 4;
-                }
-                else {
-                    info->eNybbleSwap = true;
-                    info->eStringPosA = (info->eStringNo % 15) + 3;
-                    info->eStringPosB = (info->eStringNo % 7) + 1;
-                }
-            }
-            --newPos;
-        }
-    }
-    else {
-        info->readPos = newPos;
-    }
-    fSeek(info->cFileHandle, info->readPos, SEEK_SET);
-}
+size_t GetFilePosition2(FileInfo* info) { return info->readPos; }
+void SetFilePosition2(FileInfo *info, int newPos) { info->readPos = newPos; }

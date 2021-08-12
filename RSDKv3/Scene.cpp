@@ -105,7 +105,6 @@ void InitFirstStage()
 
 void ProcessStage(void)
 {
-    int updateMax = 0; 
     switch (stageMode) {
         case STAGEMODE_LOAD: // Startup
 #if RETRO_USING_C2D
@@ -140,6 +139,7 @@ void ProcessStage(void)
             }
             pauseEnabled      = false;
             timeEnabled       = false;
+            frameCounter      = 0;
             stageMilliseconds = 0;
             stageSeconds      = 0;
             stageMinutes      = 0;
@@ -222,18 +222,8 @@ void ProcessStage(void)
                 stageMilliseconds = 100 * frameCounter / Engine.refreshRate;
             }
 
-            updateMax = 1;
-            /*updateMax = Engine.renderFrameIndex;
-            if (Engine.refreshRate >= Engine.targetRefreshRate) {
-                updateMax = 0;
-                if (Engine.frameCount % Engine.skipFrameIndex < Engine.renderFrameIndex)
-                    updateMax = 1;
-            }*/
-
             // Update
-            for (int i = 0; i < updateMax; ++i) {
-                ProcessObjects();
-            }
+            ProcessObjects();
 
             if (cameraTarget > -1) {
                 if (cameraEnabled == 1) {
@@ -266,19 +256,9 @@ void ProcessStage(void)
             lastYSize = -1;
             CheckKeyDown(&keyDown, 0xFF);
             CheckKeyPress(&keyPress, 0xFF);
-            
-            updateMax = 1;
-            /*updateMax = Engine.renderFrameIndex;
-            if (Engine.refreshRate >= Engine.targetRefreshRate) {
-                updateMax = 0;
-                if (Engine.frameCount % Engine.skipFrameIndex < Engine.renderFrameIndex)
-                    updateMax = 1;
-            }*/
 
             // Update
-            for (int i = 0; i < updateMax; ++i) {
-                ProcessPausedObjects();
-            }
+            ProcessPausedObjects();
 
 #if RETRO_HARDWARE_RENDER && !RETRO_USING_C2D
             gfxIndexSize        = 0;
@@ -342,7 +322,26 @@ void LoadStageFiles(void)
                 SetObjectTypeName(strBuffer, i + scriptID);
             }
 
-            if (Engine.usingBytecode && !forceUseScripts) {
+#if RETRO_USE_MOD_LOADER
+            char scriptPath[0x40];
+            if (Engine.bytecodeMode == BYTECODE_MOBILE)
+                StrCopy(scriptPath, "Bytecode/GlobalCode.bin");
+            else
+                StrCopy(scriptPath, "Data/Scripts/ByteCode/GS000.bin");
+
+            bool bytecodeExists = false;
+            FileInfo bytecodeInfo;
+            GetFileInfo(&infoStore);
+            if (LoadFile(scriptPath, &info)) {
+                bytecodeExists = true;
+                CloseFile();
+            }
+            SetFileInfo(&infoStore);
+
+            if (bytecodeExists && !forceUseScripts) {
+#else
+            if (Engine.usingBytecode) {
+#endif
                 GetFileInfo(&infoStore);
                 CloseFile();
                 LoadBytecode(4, scriptID);
@@ -381,7 +380,46 @@ void LoadStageFiles(void)
                 strBuffer[fileBuffer2] = 0;
                 SetObjectTypeName(strBuffer, scriptID + i);
             }
-            if (Engine.usingBytecode && !forceUseScripts) {
+#if RETRO_USE_MOD_LOADER
+            char scriptPath[0x40];
+            if (Engine.bytecodeMode == BYTECODE_MOBILE) {
+                switch (activeStageList) {
+                    case STAGELIST_PRESENTATION:
+                    case STAGELIST_REGULAR:
+                    case STAGELIST_BONUS:
+                    case STAGELIST_SPECIAL:
+                        StrCopy(scriptPath, "Data/Scripts/ByteCode/");
+                        StrAdd(scriptPath, stageList[activeStageList][stageListPosition].folder);
+                        StrAdd(scriptPath, ".bin");
+                        break;
+                    case 4: StrCopy(scriptPath, "Data/Scripts/ByteCode/GlobalCode.bin"); break;
+                    default: break;
+                }
+            }
+            else {
+                StrCopy(scriptPath, "Data/Scripts/ByteCode/GS000.bin");
+                int pos = StrLength(scriptPath) - 9;
+                if (activeStageList < STAGELIST_MAX) {
+                    char listIDs[4]     = { 'P', 'R', 'B', 'S' };
+                    scriptPath[pos]     = listIDs[activeStageList];
+                    scriptPath[pos + 2] = stageListPosition / 100 + '0';
+                    scriptPath[pos + 3] = stageListPosition % 100 / 10 + '0';
+                    scriptPath[pos + 4] = stageListPosition % 10 + '0';
+                }
+            }
+            bool bytecodeExists = false;
+            FileInfo bytecodeInfo;
+            GetFileInfo(&infoStore);
+            if (LoadFile(scriptPath, &info)) {
+                bytecodeExists = true;
+                CloseFile();
+            }
+            SetFileInfo(&infoStore);
+
+            if (bytecodeExists && !forceUseScripts) {
+#else
+            if (Engine.usingBytecode) {
+#endif
                 for (byte i = 0; i < stageObjectCount; ++i) {
                     FileRead(&fileBuffer2, 1);
                     FileRead(strBuffer, fileBuffer2);
@@ -907,8 +945,8 @@ void LoadStageGIFFile(int stageID)
         height += (fileBuffer << 8);
 
         FileRead(&fileBuffer, 1); // Palette Size
-        int has_pallete = (fileBuffer & 0x80) >> 7;
-        int colors = ((fileBuffer & 0x70) >> 4) + 1;
+        //int has_pallete = (fileBuffer & 0x80) >> 7;
+        //int colors = ((fileBuffer & 0x70) >> 4) + 1;
         int palette_size = (fileBuffer & 0x7) + 1;
         if (palette_size > 0)
             palette_size = 1 << palette_size;

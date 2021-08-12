@@ -37,7 +37,7 @@ extern int paletteMode;
 extern int texPaletteNum;
 #endif
 
-#define RGB888_TO_RGB5551(r, g, b) (2 * ((b) >> 3) | ((g) >> 3 << 6) | ((r) >> 3 << 11) | 0) // used in mobile vers
+#define RGB888_TO_RGB5551(r, g, b) ((((b) >> 3) << 1) | ((g) >> 3 << 6) | ((r) >> 3 << 11) | 0) // used in mobile vers
 #define RGB888_TO_RGB565(r, g, b)  ((b) >> 3) | (((g) >> 2) << 5) | (((r) >> 3) << 11)       // used in pc vers
 
 #if RETRO_SOFTWARE_RENDER || RETRO_PLATFORM == RETRO_3DS // my hardware renderer relied on the original graphic data being in RGB565
@@ -103,13 +103,13 @@ inline void RotatePalette(byte startIndex, byte endIndex, bool right)
 {
     if (right) {
         ushort startClr         = activePalette[endIndex];
-        PaletteEntry startClr32 = activePalette32[startIndex];
+        PaletteEntry startClr32 = activePalette32[endIndex];
         for (int i = endIndex; i > startIndex; --i) {
             activePalette[i]   = activePalette[i - 1];
             activePalette32[i] = activePalette32[i - 1];
         }
         activePalette[startIndex] = startClr;
-        activePalette32[endIndex] = startClr32;
+        activePalette32[startIndex] = startClr32;
     }
     else {
         ushort startClr         = activePalette[startIndex];
