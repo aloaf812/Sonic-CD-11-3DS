@@ -41,8 +41,12 @@ static inline void CopyToFramebuffer(u16* buffer) {
 #endif
 
 #if RETRO_USING_C2D
-static int stereoOffset[7] = {
-	16, 12, 8, 6, 4, 2, 0
+static int tileStereoOffset[7] = {
+	12, 6, 3, 2, 0, 0, 0
+};
+
+static int spriteStereoOffset[7] = {
+	12, 8, 6, 4, 2, 2, 0
 };
 
 static inline void drawSpriteLayer(int layer, bool rightScreen) {
@@ -53,7 +57,7 @@ static inline void drawSpriteLayer(int layer, bool rightScreen) {
             C2D_DrawRectSolid(r.x, r.y, 0, r.w, r.h, r.color);
 	} else if (_3ds_sprites[layer][i].isQuad) {
 	    _3ds_quad q = _3ds_sprites[layer][i].quad;
-	    int offset = rightScreen ? (int) (osGet3DSliderState() * stereoOffset[layer]) : 0;
+	    int offset = rightScreen ? (int) (osGet3DSliderState() * spriteStereoOffset[layer]) : 0;
 	    // draw two triangles, ACD and ABD
 	    C2D_DrawTriangle(  q.vList[0].x + offset, q.vList[0].y, q.color,
 			       q.vList[2].x + offset, q.vList[2].y, q.color,
@@ -67,7 +71,7 @@ static inline void drawSpriteLayer(int layer, bool rightScreen) {
 	    spr.params       = _3ds_sprites[layer][i].params;
 
 	    if (rightScreen) {
-	        spr.params.pos.x += (int) (osGet3DSliderState() * stereoOffset[layer]);
+	        spr.params.pos.x += (int) (osGet3DSliderState() * spriteStereoOffset[layer]);
 	    }
 
             C2D_DrawSpriteTinted(&spr, &_3ds_sprites[layer][i].tint);
@@ -86,7 +90,7 @@ static inline void drawTileLayer(int layer, bool rightScreen) {
 	tile.params = _3ds_tiles[layer][i].params;
 
 	if (rightScreen) {
-            tile.params.pos.x += (int) (osGet3DSliderState() * stereoOffset[layer]);
+            tile.params.pos.x += (int) (osGet3DSliderState() * tileStereoOffset[layer]);
 	}
 
 	C2D_DrawSprite(&tile);
