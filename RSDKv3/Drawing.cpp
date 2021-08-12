@@ -54,7 +54,8 @@ static inline void drawSpriteLayer(int layer, bool rightScreen) {
         C2D_Sprite spr;
 	if (_3ds_sprites[layer][i].isRect) {
             _3ds_rectangle r = _3ds_sprites[layer][i].rect;
-            C2D_DrawRectSolid(r.x, r.y, 0, r.w, r.h, r.color);
+	    int offset = rightScreen ? (int) (osGet3DSliderState() * spriteStereoOffset[layer]) : 0;
+            C2D_DrawRectSolid(r.x + offset, r.y, 0, r.w, r.h, r.color);
 	} else if (_3ds_sprites[layer][i].isQuad) {
 	    _3ds_quad q = _3ds_sprites[layer][i].quad;
 	    int offset = rightScreen ? (int) (osGet3DSliderState() * spriteStereoOffset[layer]) : 0;
