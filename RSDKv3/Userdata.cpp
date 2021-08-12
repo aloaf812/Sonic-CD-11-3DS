@@ -539,7 +539,7 @@ void writeSettings() {
     ini->SetInteger("Controller 1", "Start", inputDevice[INPUT_START].contMappings);
 
     ini->Write(BASE_PATH"settings.ini");
-	delete[] ini;
+    delete ini;
 }
 
 void ReadUserdata()

@@ -317,9 +317,12 @@ int ProcessVideo()
 void StopVideoPlayback()
 {
 #if RETRO_PLATFORM == RETRO_3DS
-    CloseVideo();
-    videoPlaying = false;
-    Engine.gameMode = ENGINE_MAINGAME;
+    if (videoPlaying) {
+        CloseVideo();
+        videoPlaying = false;
+    }
+    if (Engine.gameMode != ENGINE_EXITGAME)
+        Engine.gameMode = ENGINE_MAINGAME;
 #elif RETRO_USING_SDL2 || RETRO_USING_SDL1
     if (videoPlaying) {
         // `videoPlaying` and `videoDecoder` are read by

@@ -480,7 +480,7 @@ void RetroEngine::Run()
     }
 
     ReleaseAudioDevice();
-#if RETRO_PLATOFRM == RETRO_3DS && !RETRO_USING_SDL1_AUDIO
+#if RETRO_PLATOFRM == RETRO_3DS && !RETRO_USING_SDL1_AUDIO && !RETRO_USING_SDLMIXER
     _3ds_audioExit();
 #endif
     StopVideoPlayback();
@@ -490,7 +490,7 @@ void RetroEngine::Run()
     saveMods();
 #endif
 
-#if RETRO_USING_SDL1 || RETRO_USING_SDL2 || RETRO_USING_SDL1_AUDIO
+#if RETRO_USING_SDL1 || RETRO_USING_SDL2
     SDL_QuitSubSystem(SDL_INIT_AUDIO);
 #endif
 #if RETRO_USING_SDL1 || RETRO_USING_SDL2
