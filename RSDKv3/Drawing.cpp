@@ -877,7 +877,7 @@ void DrawHLineScrollLayer(int layerID)
 #if RETRO_USING_C2D
     clearScreen = 1;
     for (int sy = TILE_SIZE - tileY16 - 16; sy < SCREEN_YSIZE; sy += 16) {
-        int chunkX = hParallax.linePos[*scrollIndex];
+        int chunkX = hParallax.linePos[*scrollIndex] - TILE_SIZE;
         int fullLayerWidth = layerwidth << 7;
         chunkX %= fullLayerWidth;
 
@@ -896,7 +896,7 @@ void DrawHLineScrollLayer(int layerID)
         int chunkXPos  = chunkX >> 7;
         int chunkTileX = ((chunkX & 0x7F) >> 4) + 1;
 
-        for (int sx = -(chunkX & 0xF); sx < SCREEN_XSIZE; sx += 16) {
+        for (int sx = -(chunkX & 0xF) - TILE_SIZE; sx < SCREEN_XSIZE; sx += 16) {
                 if (tiles128x128.visualPlane[chunk] == (byte)aboveMidPoint)
                         _3ds_prepTile(sx, sy, tiles128x128.gfxDataPos[chunk], tiles128x128.direction[chunk], tileLayerToDraw);
 
