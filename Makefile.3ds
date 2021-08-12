@@ -22,8 +22,8 @@ LDFLAGS_ALL  = $(LDFLAGS)
 TARGET = SonicCD
 
 APP_TITLE := Sonic CD
-APP_DESCRIPTION := Unofficial port of the 2011 Sonic CD remake to the 3DS
-APP_AUTHOR := Rubberduckycooly, SaturnSH2x2 et. al.
+APP_DESCRIPTION := Sonic CD (2011)
+APP_AUTHOR := Rubberduckycooly, SaturnSH2x2
 APP_ICON := resources/48x48.png
 
 export INCLUDE = $(foreach dir,$(LIBDIRS),-I$(dir)/include) \
