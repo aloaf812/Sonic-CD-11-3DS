@@ -42,11 +42,11 @@ static inline void CopyToFramebuffer(u16* buffer) {
 
 #if RETRO_USING_C2D
 static int tileStereoOffset[7] = {
-	12, 6, 3, 2, 0, 0, 0
+	9, 6, 3, 2, 0, 0, 0
 };
 
 static int spriteStereoOffset[7] = {
-	12, 8, 6, 4, 2, 2, 0
+	9, 8, 6, 4, 2, 2, 0
 };
 
 static inline void drawSpriteLayer(int layer, bool rightScreen) {
