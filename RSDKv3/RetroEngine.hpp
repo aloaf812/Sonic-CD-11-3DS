@@ -11,9 +11,7 @@
 
 #if !RETRO_USE_ORIGINAL_CODE
 #undef RETRO_USE_MOD_LOADER
-#if RETRO_PLATFORM != RETRO_3DS
 #define RETRO_USE_MOD_LOADER (1)
-#endif
 #endif //  !RETRO_USE_ORIGINAL_CODE
 
 // ================
