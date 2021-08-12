@@ -119,8 +119,9 @@ void InitUserdata()
     sprintf(buffer, BASE_PATH"settings.ini");
 #endif
     FileIO *file = fOpen(buffer, "rb");
-    IniParser *ini = new IniParser();
+    IniParser* ini;
     if (!file) {
+	ini = new IniParser();
         ini->SetBool("Dev", "DevMenu", Engine.devMenu = false);
         ini->SetBool("Dev", "EngineDebugMode", engineDebugMode = false);
         ini->SetInteger("Dev", "StartingCategory", Engine.startList = 0);
@@ -173,8 +174,7 @@ void InitUserdata()
     }
     else {
         fClose(file);
-		delete[] ini;
-        ini = new IniParser(BASE_PATH"settings.ini");
+        ini = new IniParser(buffer);
         if (!ini->GetBool("Dev", "DevMenu", &Engine.devMenu))
             Engine.devMenu = false;
         if (!ini->GetBool("Dev", "EngineDebugMode", &engineDebugMode))
@@ -332,7 +332,8 @@ void InitUserdata()
             RTRIGGER_DEADZONE = 0.3;
 #endif
     }
-	delete[] ini;
+
+    delete ini;
     SetScreenSize(SCREEN_XSIZE, SCREEN_YSIZE);
 
     // Support for extra controller types SDL doesn't recognise
