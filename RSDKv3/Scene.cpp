@@ -109,7 +109,6 @@ void ProcessStage(void)
         case STAGEMODE_LOAD: // Startup
 #if RETRO_USING_C2D
     _3ds_delTileSurface();
-    gfxSet3D(true);
 #endif
 
 #if RETRO_USING_SDLMIXER
@@ -514,6 +513,7 @@ void LoadStageFiles(void)
     yScrollB                 = (playerList[0].YPos >> 16) - SCREEN_SCROLL_UP + SCREEN_YSIZE;
 #if RETRO_USING_C2D
     _3ds_cacheTileSurface(tilesetGFXData);
+    gfxSet3D(true);
 #endif
 
 

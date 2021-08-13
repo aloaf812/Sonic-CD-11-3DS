@@ -3622,17 +3622,42 @@ void DrawTextMenuEntry(void *menu, int rowID, int XPos, int YPos, int textHighli
 {
     TextMenu *tMenu = (TextMenu *)menu;
     int id          = tMenu->entryStart[rowID];
+#if RETRO_USING_C2D
+    int origLayerToDraw = spriteLayerToDraw;
+    spriteLayerToDraw = 0;
+#endif
     for (int i = 0; i < tMenu->entrySize[rowID]; ++i) {
+#if RETRO_USING_C2D
+       while (spriteLayerToDraw < 7 && spriteIndex[spriteLayerToDraw] >= MAX_SPRITES_PER_LAYER)
+           spriteLayerToDraw++; 
+       if (spriteLayerToDraw >= 7)
+           break;
+#endif
+
         DrawSprite(XPos + (i << 3), YPos, 8, 8, (int)((int)(tMenu->textData[id] & 0xF) << 3),
                             (int)((int)(tMenu->textData[id] >> 4) << 3) + textHighlight, textMenuSurfaceNo);
         id++;
     }
+#if RETRO_USING_C2D
+    spriteLayerToDraw = origLayerToDraw;
+#endif
 }
 void DrawStageTextEntry(void *menu, int rowID, int XPos, int YPos, int textHighlight)
 {
     TextMenu *tMenu = (TextMenu *)menu;
     int id          = tMenu->entryStart[rowID];
+#if RETRO_USING_C2D
+    int origLayerToDraw = spriteLayerToDraw;
+    spriteLayerToDraw = 0;
+#endif
     for (int i = 0; i < tMenu->entrySize[rowID]; ++i) {
+#if RETRO_USING_C2D
+       while (spriteLayerToDraw < 7 && spriteIndex[spriteLayerToDraw] >= MAX_SPRITES_PER_LAYER)
+           spriteLayerToDraw++; 
+       if (spriteLayerToDraw >= 7)
+           break;
+#endif
+
         if (i == tMenu->entrySize[rowID] - 1) {
             DrawSprite(XPos + (i << 3), YPos, 8, 8, (int)((int)(tMenu->textData[id] & 0xF) << 3),
                                 (int)((int)(tMenu->textData[id] >> 4) << 3), textMenuSurfaceNo);
@@ -3643,6 +3668,10 @@ void DrawStageTextEntry(void *menu, int rowID, int XPos, int YPos, int textHighl
         }
         id++;
     }
+
+#if RETRO_USING_C2D
+    spriteLayerToDraw = origLayerToDraw;
+#endif
 }
 void DrawBlendedTextMenuEntry(void *menu, int rowID, int XPos, int YPos, int textHighlight)
 {
