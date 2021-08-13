@@ -112,6 +112,10 @@ void ProcessStage(void)
     gfxSet3D(true);
 #endif
 
+#if RETRO_USING_SDLMIXER
+    FreeAllMusic();
+    ReleaseStageSfx();
+#endif
             fadeMode = 0;
             SetActivePalette(0, 0, 256);
 

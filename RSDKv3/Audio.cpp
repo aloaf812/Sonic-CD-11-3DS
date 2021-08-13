@@ -10,6 +10,7 @@ int trackID       = -1;
 int sfxVolume     = MAX_VOLUME;
 int bgmVolume     = MAX_VOLUME;
 bool audioEnabled = false;
+bool globalSfxLoaded = false;
 
 int nextChannelPos;
 bool musicEnabled;
@@ -139,6 +140,9 @@ void LoadGlobalSfx()
     byte fileBuffer = 0;
     int fileBuffer2 = 0;
 
+    if (globalSfxLoaded)
+	    return;
+
     if (LoadFile("Data/Game/Gameconfig.bin", &info)) {
         infoStore = info;
 
@@ -200,6 +204,8 @@ void LoadGlobalSfx()
     // sfxDataPosStage = sfxDataPos;
     nextChannelPos = 0;
     for (int i = 0; i < CHANNEL_COUNT; ++i) sfxChannels[i].sfxID = -1;
+
+    globalSfxLoaded = true;
 }
 
 #if RETRO_USING_SDL1_AUDIO || RETRO_USING_SDL2
@@ -739,6 +745,8 @@ void LoadSfx(char *filePath, byte sfxID)
 		sfxList[sfxID].loaded = true;
 	    }
 	}
+
+	free(sfxData[sfxID]);
 #elif RETRO_USING_SDL1_AUDIO || RETRO_USING_SDL2
         byte *sfx = new byte[info.fileSize];
         FileRead(sfx, info.fileSize);

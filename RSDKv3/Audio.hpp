@@ -96,6 +96,7 @@ extern int trackID;
 extern int sfxVolume;
 extern int bgmVolume;
 extern bool audioEnabled;
+extern bool globalSfxLoaded;
 
 extern int nextChannelPos;
 extern bool musicEnabled;
@@ -164,13 +165,24 @@ inline void FreeAllMusic() {
 	if (musicTracks[i].mus != NULL) {
             Mix_FreeMusic(musicTracks[i].mus);
 	    musicTracks[i].mus = NULL;
-	    /*
-	    SDL_RWclose(trackRwops[i]);
+	    //SDL_RWclose(trackRwops[i]);
 	    trackRwops[i] = NULL;
 	    free(trackData[i]);
 	    trackData[i] = NULL;
-	    */
 	}
+}
+
+inline void FreeAllSfx() {
+    for (int i = 0; i < SFX_COUNT; i++) {
+	    if (sfxList[i].chunk) {
+	        Mix_FreeChunk(sfxList[i].chunk);
+                sfxList[i].chunk = NULL;
+	    }
+	    //SDL_RWclose(sfxRwops[i]);
+	    sfxRwops[i] = NULL;
+	    //free(sfxData[i]);
+	    sfxData[i] = NULL;
+    }
 }
 #endif
 
@@ -278,12 +290,10 @@ inline void ReleaseGlobalSfx()
                 Mix_FreeChunk(sfxList[i].chunk);
 	        sfxList[i].chunk = NULL;
 	    }
-	    /*
-	    SDL_RWclose(sfxRwops[i]);
+	    //SDL_RWclose(sfxRwops[i]);
 	    sfxRwops[i] = NULL;
-	    free(sfxData[i]);
+	    //free(sfxData[i]);
 	    sfxData[i] = NULL;
-	    */
 #endif
 
             StrCopy(sfxList[i].name, "");
@@ -293,6 +303,7 @@ inline void ReleaseGlobalSfx()
         }
     }
     globalSFXCount = 0;
+    globalSfxLoaded = false;
 }
 inline void ReleaseStageSfx()
 {
@@ -303,12 +314,10 @@ inline void ReleaseStageSfx()
 	        Mix_FreeChunk(sfxList[i].chunk);
                 sfxList[i].chunk = NULL;
 	    }
-	    /*
-	    SDL_RWclose(sfxRwops[i]);
+	    //SDL_RWclose(sfxRwops[i]);
 	    sfxRwops[i] = NULL;
-	    free(sfxData[i]);
+	    //free(sfxData[i]);
 	    sfxData[i] = NULL;
-	    */
 #endif
 
             StrCopy(sfxList[i].name, "");
