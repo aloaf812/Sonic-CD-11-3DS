@@ -16,10 +16,10 @@ void awaitInput() {
 
 int main(int argc, char *argv[])
 {
-    #if RETRO_PLATFORM == RETRO_3DS
-    // at this point in time, N3DS clock speeds are necessary
-    // for the game to even run at full speed
-    //osSetSpeedupEnable(true);
+#if RETRO_PLATFORM == RETRO_3DS
+#if RETRO_RENDERTYPE == RETRO_SW_RENDER
+    osSetSpeedupEnable(true);
+#endif
 
     if (!Engine.Init()) {
 	    printf("Press any button to continue.\n");
@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
     printf("Exiting...");
     gfxExit();
 
-    #else
+#else
     for (int i = 0; i < argc; ++i) {
         if (StrComp(argv[i], "UsingCWD"))
             usingCWD = true;
@@ -47,7 +47,12 @@ int main(int argc, char *argv[])
 
     Engine.Init();
     Engine.Run();
-    #endif
+#endif
+
+
+#if RETRO_RENDERTYPE == RETRO_SW_RENDER
+    osSetSpeedupEnable(false);
+#endif
 
     return 0;
 }
