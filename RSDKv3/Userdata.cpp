@@ -679,11 +679,12 @@ void initMods()
     fs::path modPath(modBuf);
 
     if (fs::exists(modPath) && fs::is_directory(modPath)) {
-        std::string mod_config = modPath.string() + "/modconfig.ini";
-        FileIO *configFile     = fOpen(mod_config.c_str(), "r");
+        //std::string mod_config = modPath.string() + "modconfig.ini";
+	sprintf(modBuf, "%smods/modconfig.ini", modsPath);
+        FileIO *configFile     = fOpen(modBuf, "r");
         if (configFile) {
             fClose(configFile);
-            IniParser modConfig(mod_config.c_str(), false);
+            IniParser modConfig(modBuf, false);
 
             for (int m = 0; m < modConfig.items.size(); ++m) {
                 bool active = false;
@@ -936,7 +937,8 @@ void saveMods()
     fs::path modPath(modBuf);
 
     if (fs::exists(modPath) && fs::is_directory(modPath)) {
-        std::string mod_config = modPath.string() + "/modconfig.ini";
+	sprintf(modBuf, "%smods/modconfig.ini", modsPath);
+        //std::string mod_config = modPath.string() + "/modconfig.ini";
         IniParser modConfig;
 
         for (int m = 0; m < modList.size(); ++m) {
@@ -945,7 +947,7 @@ void saveMods()
             modConfig.SetBool("mods", info->folder.c_str(), info->active);
         }
 
-        modConfig.Write(mod_config.c_str(), false);
+        modConfig.Write(modBuf, false);
     }
 }
 #endif
