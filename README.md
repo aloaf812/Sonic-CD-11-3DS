@@ -21,7 +21,7 @@ Even if your platform isn't supported by the official releases, you **must** buy
 # How to build:
 * Set up a working 3DS Homebrew Environment. You can find more information on this [here](https://www.3dbrew.org/wiki/Setting_up_Development_Environment).
 * Make sure `SDL`, `SDL_mixer`, `3ds-dev`, `3ds-libvorbisidec`, `3ds-libtheora`, `3ds-mikmod`, and `3ds-libmad` are installed.
-* Edit RetroEngine.hpp as necessary depending on what version of the port you want to build. If you want to build the software rendered version, set `RETRO_USING_C2D` to 0.
+* Edit `RetroEngine.hpp` as necessary depending on what version of the port you want to build. If you want to build the software rendered version, set `RETRO_USING_C2D` to 0.
 * Run `make -f Makefile.3ds`. Run `make-f Makefile.3ds cia` to build a `.cia` file.
 
 # FAQ
