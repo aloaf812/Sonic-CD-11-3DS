@@ -203,10 +203,6 @@ inline void freeMusInfo()
 
         SDL_UnlockAudio();
     }
-
-#if RETRO_USING_SDLMIXER
-    FreeAllMusic();
-#endif
 }
 #endif
 
