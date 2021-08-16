@@ -46,7 +46,7 @@ static int tileStereoOffset[7] = {
 };
 
 static int spriteStereoOffset[7] = {
-	9, 8, 6, 4, 2, 2, 0
+	9, 8, 6, 3, 2, 2, 0
 };
 
 static inline void drawSpriteLayer(int layer, bool rightScreen) {
