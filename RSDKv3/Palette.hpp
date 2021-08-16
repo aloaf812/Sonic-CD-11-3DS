@@ -72,7 +72,7 @@ inline void SetPaletteEntry(byte paletteIndex, byte index, byte r, byte g, byte 
         fullPalette32[paletteIndex][index].r = r;
         fullPalette32[paletteIndex][index].g = g;
         fullPalette32[paletteIndex][index].b = b;
-#if RETRO_HARDWARE_RENDER
+#if RETRO_HARDWARE_RENDER && !RETRO_USING_C2D
         if (index)
             fullPalette[paletteIndex][index] |= 1;
 #endif
@@ -82,7 +82,7 @@ inline void SetPaletteEntry(byte paletteIndex, byte index, byte r, byte g, byte 
         activePalette32[index].r = r;
         activePalette32[index].g = g;
         activePalette32[index].b = b;
-#if RETRO_HARDWARE_RENDER
+#if RETRO_HARDWARE_RENDER && !RETRO_USING_C2D
         if (index)
             activePalette[index] |= 1;
 #endif
