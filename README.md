@@ -22,7 +22,7 @@ Even if your platform isn't supported by the official releases, you **must** buy
 * Set up a working 3DS Homebrew Environment. You can find more information on this [here](https://www.3dbrew.org/wiki/Setting_up_Development_Environment).
 * Make sure `SDL`, `SDL_mixer`, `3ds-dev`, `3ds-libvorbisidec`, `3ds-libtheora`, `3ds-mikmod`, and `3ds-libmad` are installed.
 * Edit `RetroEngine.hpp` as necessary depending on what version of the port you want to build. If you want to build the software rendered version, set `RETRO_USING_C2D` to 0.
-* Run `make -f Makefile.3ds`. Run `make-f Makefile.3ds cia` to build a `.cia` file.
+* Run `make -f Makefile.3ds`. Run `make -f Makefile.3ds cia` to build a `.cia` file.
 
 # FAQ
 ### Q: Why dont some buttons in the menu work?
@@ -35,7 +35,7 @@ A: Submit an issue in the issues tab and I'll fix/add it (if possible). Keep in 
 A: Yes! You can check out @JeffRuLz's RSDKv4 port [here](https://github.com/JeffRuLz/Sonic-1-2-2013-Decompilation).
 
 ### Q: Why is video playback so slow?
-A: You're going to want to scale down your videos for them to run well on 3DS. You can find pre-scaled versions of the CD's videos [here](https://gamebanana.com/mods/313570).
+A: You're going to want to scale down your videos for them to run well on 3DS. You can find pre-scaled versions of the videos [here](https://gamebanana.com/mods/313570).
 
 # Special Thanks
 * [Rubberduckycooly](https://github.com/Rubberduckycooly): For decompiling CD in the first place, as well as helping me out with a few aspects of the port.
