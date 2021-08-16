@@ -59,7 +59,7 @@ void videoDecode_thread(void* nul) {
 	audioInit(ainfo);
 
 	if (THEORA_HasVideo(&vidCtx)) {
-		printf("Ogg stream is Theora %dx%d %.02f fps\n", vinfo->width, vinfo->height, vinfo->fps);
+		//printf("Ogg stream is Theora %dx%d %.02f fps\n", vinfo->width, vinfo->height, vinfo->fps);
 		frameInit(&frame, vinfo);
 		scaleframe = getFrameScalef(vinfo->width, vinfo->height, SCREEN_WIDTH, SCREEN_HEIGHT);
 	}
@@ -98,7 +98,7 @@ void videoDecode_thread(void* nul) {
 		}
 	}
 
-	printf("frames: %d dropped: %d\n", vidCtx.frames, vidCtx.dropped);
+	//printf("frames: %d dropped: %d\n", vidCtx.frames, vidCtx.dropped);
 	videodone = true;
 
 	if (THEORA_HasVideo(&vidCtx))
@@ -177,7 +177,7 @@ static void changeFile(const char* filepath) {
 		return;
 	}
 
-	printf("Theora Create sucessful.\n");
+	//printf("Theora Create sucessful.\n");
 
 	s32 prio;
 	svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
@@ -190,7 +190,7 @@ void PlayVideo(const char* fileName) {
 	ReleaseAudioDevice();
 	ndspInit();
 	ndspSetCallback(audioCallback, NULL);
-	printf("Loading from %s\n", fileName);
+	//printf("Loading from %s\n", fileName);
 
 #if !RETRO_USING_C2D
 	// using the software-rendered build; init Citro2D here
