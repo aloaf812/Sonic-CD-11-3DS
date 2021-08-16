@@ -113,7 +113,6 @@ void ProcessStage(void)
 
 #if RETRO_USING_SDLMIXER
     FreeAllMusic();
-    ReleaseStageSfx();
 #endif
             fadeMode = 0;
             SetActivePalette(0, 0, 256);
@@ -297,6 +296,9 @@ void LoadStageFiles(void)
     char strBuffer[0x100];
 
     if (!CheckCurrentStageFolder(stageListPosition)) {
+#if RETRO_USING_SDLMIXER
+        ReleaseStageSfx();
+#endif
         printLog("Loading Scene %s - %s", stageListNames[activeStageList], stageList[activeStageList][stageListPosition].name);
         ReleaseStageSfx();
         LoadPalette("MasterPalette.act", 0, 0, 0, 256);
