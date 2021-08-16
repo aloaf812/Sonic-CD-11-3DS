@@ -53,7 +53,12 @@ void PlayVideoFile(char *filePath)
 
     StrCopy(pathBuffer, "videos/");
     StrAdd(pathBuffer, filePath);
-    StrAdd(pathBuffer, ".ogv");
+
+    if (GetGlobalVariableByName("Options.Soundtrack")) {
+        StrAdd(pathBuffer, ".us.ogv");
+    } else {
+        StrAdd(pathBuffer, ".ogv");
+    }
     
     bool addPath = true;
     // Fixes ".ani" ".Ani" bug and any other case differences

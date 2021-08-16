@@ -56,8 +56,7 @@ void videoDecode_thread(void* nul) {
 	THEORA_videoinfo* vinfo = THEORA_vidinfo(&vidCtx);
 	THEORA_audioinfo* ainfo = THEORA_audinfo(&vidCtx);
 
-	if (THEORA_HasAudio(&vidCtx) && !GetGlobalVariableByName("Options.Soundtrack"))
-		audioInit(ainfo);
+	audioInit(ainfo);
 
 	if (THEORA_HasVideo(&vidCtx)) {
 		printf("Ogg stream is Theora %dx%d %.02f fps\n", vinfo->width, vinfo->height, vinfo->fps);
@@ -79,7 +78,7 @@ void videoDecode_thread(void* nul) {
 			}
 		}
 
-		if (THEORA_HasAudio(&vidCtx) && !GetGlobalVariableByName("Options.Soundtrack")) {
+		if (THEORA_HasAudio(&vidCtx)) {
 			for (int cur_wvbuf = 0; cur_wvbuf < WAVEBUFCOUNT; cur_wvbuf++) {
 				ndspWaveBuf *buf = &waveBuf[cur_wvbuf];
 
@@ -105,8 +104,7 @@ void videoDecode_thread(void* nul) {
 	if (THEORA_HasVideo(&vidCtx))
 		frameDelete(&frame);
 
-	if (THEORA_HasAudio(&vidCtx) && !GetGlobalVariableByName("Options.Soundtrack"))
-		audioClose();
+	audioClose();
 
 	THEORA_Close(&vidCtx);
 	threadExit(0);
@@ -189,11 +187,10 @@ static void changeFile(const char* filepath) {
 
 void PlayVideo(const char* fileName) {
 	// de-init Retro Engine audio thread
-	if (!GetGlobalVariableByName("Options.Soundtrack")) {
-		ReleaseAudioDevice();
-		ndspInit();
-		ndspSetCallback(audioCallback, NULL);
-	}
+	ReleaseAudioDevice();
+	ndspInit();
+	ndspSetCallback(audioCallback, NULL);
+	printf("Loading from %s\n", fileName);
 
 #if !RETRO_USING_C2D
 	// using the software-rendered build; init Citro2D here
@@ -218,11 +215,9 @@ void CloseVideo() {
 	exitThread();
 
 	// re-init Retro Engine audio thread
-	if (!GetGlobalVariableByName("Options.Soundtrack")) {
-		ndspExit();
-		ndspInit();
-		InitAudioPlayback();
-	}
+	ndspExit();
+	ndspInit();
+	InitAudioPlayback();
 
 #if !RETRO_USING_C2D
 	C2D_Fini();
