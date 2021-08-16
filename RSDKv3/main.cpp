@@ -36,7 +36,6 @@ int main(int argc, char *argv[])
     printf("Running engine...\n");
     if (!engineDebugMode) {
         consoleClear();
-        consoleSelect(NULL);
     }
     Engine.Run();
 
