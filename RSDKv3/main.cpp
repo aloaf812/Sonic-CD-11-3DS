@@ -17,7 +17,7 @@ void awaitInput() {
 int main(int argc, char *argv[])
 {
 #if RETRO_PLATFORM == RETRO_3DS
-#if RETRO_RENDERTYPE == RETRO_SW_RENDER
+#if RETRO_RENDERTYPE == RETRO_SW_RENDER && RETRO_PLATFORM == RETRO_3DS
     osSetSpeedupEnable(true);
 #endif
 
@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
 #endif
 
 
-#if RETRO_RENDERTYPE == RETRO_SW_RENDER
+#if RETRO_RENDERTYPE == RETRO_SW_RENDER && RETRO_PLATFORM == RETRO_3DS
     osSetSpeedupEnable(false);
 #endif
 

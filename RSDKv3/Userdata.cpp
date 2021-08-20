@@ -277,14 +277,16 @@ void InitUserdata()
         if (!ini->GetInteger("Controller 1", "Start", &inputDevice[INPUT_START].contMappings))
             inputDevice[7].contMappings = SDL_CONTROLLER_BUTTON_START;
 
-        if (!ini.GetFloat("Controller 1", "LStickDeadzone", &LSTICK_DEADZONE))
+	/*
+        if (!ini->GetFloat("Controller 1", "LStickDeadzone", &LSTICK_DEADZONE))
             LSTICK_DEADZONE = 0.3;
-        if (!ini.GetFloat("Controller 1", "RStickDeadzone", &RSTICK_DEADZONE))
+        if (!ini->GetFloat("Controller 1", "RStickDeadzone", &RSTICK_DEADZONE))
             RSTICK_DEADZONE = 0.3;
-        if (!ini.GetFloat("Controller 1", "LTriggerDeadzone", &LTRIGGER_DEADZONE))
+        if (!ini->GetFloat("Controller 1", "LTriggerDeadzone", &LTRIGGER_DEADZONE))
             LTRIGGER_DEADZONE = 0.3;
-        if (!ini.GetFloat("Controller 1", "RTriggerDeadzone", &RTRIGGER_DEADZONE))
+        if (!ini->GetFloat("Controller 1", "RTriggerDeadzone", &RTRIGGER_DEADZONE))
             RTRIGGER_DEADZONE = 0.3;
+	    */
 #endif
 
 #if RETRO_USING_SDL1

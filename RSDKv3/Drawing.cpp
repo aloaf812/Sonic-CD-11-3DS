@@ -266,26 +266,27 @@ void RenderRenderDevice()
     SDL_Rect destScreenPos_scaled;
     SDL_Texture *texTarget = NULL;
     // allows me to disable it to prevent blur on resolutions that match only on 1 axis
-    bool tmpEnhancedScaling = Engine.enhancedScaling;
+    //bool tmpEnhancedScaling = Engine.enhancedScaling;
     SDL_GetWindowSize(Engine.window, &Engine.windowXSize, &Engine.windowYSize);
     float screenxsize = SCREEN_XSIZE;
     float screenysize = SCREEN_YSIZE;
     // check if enhanced scaling is even necessary to be calculated by checking if the screen size is close enough on one axis
     // unfortunately it has to be "close enough" because of floating point precision errors. dang it
+/*
     if (tmpEnhancedScaling) {
         bool cond1 = (std::round((Engine.windowXSize / screenxsize) * 24) / 24 == std::floor(Engine.windowXSize / screenxsize)) ? true : false;
         bool cond2 = (std::round((Engine.windowYSize / screenysize) * 24) / 24 == std::floor(Engine.windowYSize / screenysize)) ? true : false;
         if (cond1 || cond2)
             tmpEnhancedScaling = false;
     }
-
+*/
     // get 2x resolution if HQ is enabled.
     if (drawStageGFXHQ) {
         screenxsize *= 2;
         screenysize *= 2;
     }
 
-    if (!tmpEnhancedScaling) {
+  //  if (!tmpEnhancedScaling) {
         // everything here remains the same except for assinging the rect to the switching pointer.
         // the pointer has to be NULL when using enhanced scaling, or else the screen will be black.
         SDL_Rect destScreenPosRect;
@@ -308,7 +309,8 @@ void RenderRenderDevice()
                 destScreenPosRect.h = videoH;
             }
             destScreenPos = &destScreenPosRect;
-        }
+	}
+	/*
     }
     else {
         // set up integer scaled texture, which is scaled to the largest integer scale of the screen buffer
@@ -335,6 +337,7 @@ void RenderRenderDevice()
         // fill the screen with the texture, making lerp work.
         SDL_RenderSetLogicalSize(Engine.renderer, Engine.windowXSize, Engine.windowYSize);
     }
+    */
 #endif
 
     int pitch = 0;
@@ -476,6 +479,7 @@ void RenderRenderDevice()
     }
 
 #if RETRO_USING_SDL2
+    /*
     if (tmpEnhancedScaling) {
         // set render target back to the screen.
         SDL_SetRenderTarget(Engine.renderer, NULL);
@@ -492,9 +496,10 @@ void RenderRenderDevice()
         SDL_DestroyTexture(texTarget);
     }
     else {
+    */
         // no change here
         SDL_RenderPresent(Engine.renderer);
-    }
+    //}
 #endif
 #if RETRO_USING_SDL1
     ushort *px = (ushort *)Engine.screenBuffer->pixels;

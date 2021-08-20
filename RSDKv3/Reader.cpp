@@ -608,6 +608,7 @@ bool LoadFile2(const char *filePath, FileInfo *fileInfo)
             addPath = false;
             std::string fStr     = std::string(filePathBuf);
             fStr.erase(fStr.begin(), fStr.begin() + 5); // remove "Data/"
+	    fStr.insert(0, BASE_PATH);
             StrCopy(filePathBuf, fStr.c_str());
         }
     }
