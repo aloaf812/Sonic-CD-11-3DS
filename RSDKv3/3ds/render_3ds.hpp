@@ -262,7 +262,7 @@ inline void _3ds_prepQuad(Vertex* v, u32 color, int layer) {
 	}
 }
 
-inline u32 RGB565_to_RGBA8(u16 color) {
+inline u32 RGB565_to_RGBA8(u16 color, u8 alpha) {
 	// referenced: https://stackoverflow.com/questions/2442576/how-does-one-convert-16-bit-rgb565-to-24-bit-rgb888
 	u8 r5 = (color & 0xf800) >> 11;
 	u8 g6 = (color & 0x07e0) >> 5;
@@ -272,7 +272,7 @@ inline u32 RGB565_to_RGBA8(u16 color) {
 	u8 g8 = (g6 * 259 + 33) >> 6;
 	u8 b8 = (b5 * 527 + 23) >> 6;
 
-	return C2D_Color32(r8, g8, b8, 0xff);
+	return C2D_Color32(r8, g8, b8, alpha);
 }
 #endif
 #endif

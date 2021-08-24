@@ -3485,7 +3485,7 @@ void DrawFace(void *v, uint colour)
 #if RETRO_USING_C2D
   // it works, don't judge me
   ushort colour16 = RGB888_TO_RGB565(((colour >> 16) & 0xFF), ((colour >> 8) & 0xFF), ((colour >> 0) & 0xFF));
-  _3ds_prepQuad((Vertex*)v, RGB565_to_RGBA8(colour16), spriteLayerToDraw);
+  _3ds_prepQuad((Vertex*)v, RGB565_to_RGBA8(colour16, alpha), spriteLayerToDraw);
 #elif RETRO_RENDERTYPE == RETRO_HW_RENDER
     // TODO: this
 #endif
