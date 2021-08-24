@@ -396,12 +396,6 @@ void RetroEngine::Run()
 				frameDelta = msPerFrame * 4;
 		}
 
-#if RETRO_USING_C2D
-        // only print when debugging features not enabled
-        if (!Engine.devMenu)
-	    PrintStatistics();
-#endif
-
 #if RETRO_PLATFORM != RETRO_3DS
         if (frameDelta < 1000.0f / (float)refreshRate)
             SDL_Delay(1000.0f / (float)refreshRate - frameDelta);

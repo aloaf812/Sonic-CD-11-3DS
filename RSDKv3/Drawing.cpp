@@ -100,6 +100,19 @@ static inline void drawTileLayer(int layer, bool rightScreen) {
     if (rightScreen)
         tileIndex[layer] = 0;
 }
+
+static inline void drawPaletteOverlay(bool rightScreen) {
+    for (int p = 0; p < PALETTE_COUNT; ++p) {
+        int x = (SCREEN_XSIZE - (0xF << 3)) + rightScreen ? (int) (-2 * osGet3DSliderState()) : 0;
+        int y = (SCREEN_YSIZE - (0xF << 2));
+        for (int c = 0; c < PALETTE_SIZE; ++c) {
+	    C2D_DrawRectSolid(x + ((c & 0xF) << 1) + ((p % (PALETTE_COUNT / 2)) * (2 * 16)),
+                              y + ((c >> 4) << 1) + ((p / (PALETTE_COUNT / 2)) * (2 * 16)), 0, 2, 2, 
+			      C2D_Color32(fullPalette32[p][c].r, fullPalette32[p][c].g,
+				      fullPalette32[p][c].b, 0xff));
+        }
+    }
+}
 #endif
 
 int InitRenderDevice()
@@ -375,6 +388,9 @@ void RenderRenderDevice()
         drawSpriteLayer(5, false);
         drawSpriteLayer(6, false);
 
+	if (Engine.showPaletteOverlay)
+	    drawPaletteOverlay(false);
+
 	C2D_SceneBegin(Engine.rightScreen);
         if (clearScreen) {
     	    C2D_TargetClear(Engine.rightScreen, clearColor);
@@ -392,6 +408,9 @@ void RenderRenderDevice()
         drawTileLayer(3, true);
         drawSpriteLayer(5, true);
         drawSpriteLayer(6, true);
+
+	if (Engine.showPaletteOverlay)
+	    drawPaletteOverlay(true);
 
         C3D_FrameEnd(0);
     }
@@ -810,6 +829,7 @@ void DrawStageGFX(void)
         }
     }
 
+#if !RETRO_USING_C2D
     if (Engine.showPaletteOverlay) {
         for (int p = 0; p < PALETTE_COUNT; ++p) {
             int x = (SCREEN_XSIZE - (0xF << 3));
@@ -821,6 +841,8 @@ void DrawStageGFX(void)
             }
         }
     }
+#endif
+
 }
 
 void DrawHLineScrollLayer(int layerID)

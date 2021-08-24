@@ -3,7 +3,6 @@
 #define DEBUG_3DS_H
 
 void DebugConsoleInit();
-void PrintStatistics();
 
 #endif
 #endif

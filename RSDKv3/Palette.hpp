@@ -37,6 +37,10 @@ extern int paletteMode;
 extern int texPaletteNum;
 #endif
 
+// https://github.com/bubble2k16/snes9x_3ds/blob/3e5cdba3577aafefb0860966a3daf694ece8e168/source/pixform.h#L248
+#define BUILD_PIXEL_RGB5551(R,G,B) (((int) (R) << 11) | ((int) (G) << 6) | (int) ((B) << 1) | 1)
+#define CONV(px) (BUILD_PIXEL_RGB5551( (px & 0xf800) >> 11, (px & 0x07e0) >> 6, (px & 0x001f)))
+
 #define RGB888_TO_RGB5551(r, g, b) ((((b) >> 3) << 1) | ((g) >> 3 << 6) | ((r) >> 3 << 11) | 0) // used in mobile vers
 #define RGB888_TO_RGB565(r, g, b)  ((b) >> 3) | (((g) >> 2) << 5) | (((r) >> 3) << 11)       // used in pc vers
 
