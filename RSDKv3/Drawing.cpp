@@ -42,11 +42,11 @@ static inline void CopyToFramebuffer(u16* buffer) {
 
 #if RETRO_USING_C2D
 static int tileStereoOffset[7] = {
-	9, 6, 3, 2, 0, 0, 0
+	9, 6, 4, 2, 0, 0, 0
 };
 
 static int spriteStereoOffset[7] = {
-	9, 8, 6, 3, 2, 2, 0
+	9, 8, 6, 4, 2, 2, 0
 };
 
 static inline void drawSpriteLayer(int layer, bool rightScreen) {
@@ -908,6 +908,11 @@ void DrawHLineScrollLayer(int layerID)
 
 #if RETRO_USING_C2D
     clearScreen = 1;
+
+    scrollIndex = &lineScroll[(tileYPos / 16) * 16];
+    deformationData -= tileY16;
+    deformationDataW -= tileY16;
+
     for (int sy = TILE_SIZE - tileY16 - 16; sy < SCREEN_YSIZE; sy += 16) {
         int chunkX = hParallax.linePos[*scrollIndex] - TILE_SIZE;
         int fullLayerWidth = layerwidth << 7;
@@ -916,12 +921,12 @@ void DrawHLineScrollLayer(int layerID)
         if (sy < waterDrawPos) {
 	    if (hParallax.deform[*scrollIndex])
 	        chunkX += *deformationData;
-	    ++deformationData;
+	    deformationData += 16;
         }
         else {
 	    if (hParallax.deform[*scrollIndex])
-	        chunkX += *deformationDataW;   // water
-	    ++deformationDataW;
+	        chunkX += *deformationDataW;   // water TODO: still needs a bit of work
+	    deformationDataW += 16;
         }
 
         int chunk      = (layer->tiles[(chunkX >> 7) + (chunkY << 8)] << 6) + ((chunkX & 0x7F) >> 4) + 8 * tileY;
