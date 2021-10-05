@@ -25,6 +25,20 @@ Even if your platform isn't supported by the official releases, you **must** buy
 * Run `make -f Makefile.3ds`. Run `make -f Makefile.3ds cia` to build a `.cia` file.
 
 # FAQ
+### Q: What's the difference between HW and SW builds?
+A: SW builds use software rendering, using the same basic rendering backend that the PC/console
+ports of Sonic CD used. Rendering is more accurate, and all effects like scanline deformation and
+realtime palettes are supported.  However, its rather CPU-intensive, and requires a N3DS to run at
+full-speed.  HW builds use a completely custom Citro2D-based backend, using the 3DS's PICA200
+to get graphics on-screen, and thus can run at full-speed on O3DS systems, in addition to 
+supporting features like stereosopic 3D, however, certain features like realtime palettes aren't 
+supported. tl;dr use HW if on O3DS or if you care about 3D, use SW if on N3DS.
+
+### Q: Why is the port separated into HW and SW builds?
+A: Because that's how the base decomp was set up initially, at the time the port was started.
+I plan on integrating both backends into a single build eventually, however, this probably won't
+happen until the HW backend is complete.
+
 ### Q: Why dont some buttons in the menu work?
 A: Buttons like leaderboards & achievements require code to be added to support online functionality & menus (though they are saved anyways), and other buttons like the controls button on PC or privacy button on mobile have no game code and are instead hardcoded through callbacks, and I just didnt feel like going through the effort to decompile all that, since its not really worth it
 
