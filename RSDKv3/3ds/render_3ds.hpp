@@ -4,7 +4,7 @@
 #define MAX_TILES_PER_LAYER   (26 * 16 * 6)    // 400x240 resolution -> 25x15 tiles onscreen per layer at once
 #define MAX_SPRITES_PER_LAYER (150)             // just guessing here lol (need higher limit for the dev menu?)
 
-#define TILE_MAXSIZE 6    	// also just guessing here lol
+#define TILE_MAXSIZE 8    	// also just guessing here lol
 
 #if RETRO_USING_C2D
 
@@ -76,7 +76,7 @@ void _3ds_delSpriteSurface(int sheetID);
 void _3ds_cacheTileSurface(byte* tilesetGfxPtr);
 void _3ds_delTileSurface();
 void _3ds_cacheGfxSurface(byte* gfxDataPtr, C3D_Tex* dst,
-			  int width, int height, bool write);
+			  int width, int height, bool allPalette);
 
 inline void SWTilePosToHWTilePos(int sx, int sy, int* dx, int* dy) {
 	*dx = sx + (16 * (sy / 512));

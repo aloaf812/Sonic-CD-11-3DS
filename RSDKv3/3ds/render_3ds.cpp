@@ -143,7 +143,7 @@ void _3ds_delTileSurface() {
 }
 
 void _3ds_cacheGfxSurface(byte* gfxDataPtr, C3D_Tex* dst,
-			  int width, int height, bool write) {
+			  int width, int height, bool allPalette) {
         byte *lineBuffer   = &gfxLineBuffer[0];
 	activePalette = fullPalette[*lineBuffer];
 

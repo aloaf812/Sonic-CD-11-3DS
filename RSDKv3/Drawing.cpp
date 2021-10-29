@@ -49,7 +49,7 @@ static int spriteStereoOffset[7] = {
 	9, 8, 6, 4, 2, 2, 0
 };
 
-static inline void drawSpriteLayer(int layer, bool rightScreen) {
+static inline void drawSpriteLayer(int layer, bool rightScreen, bool clearIndex) {
     for (int i = 0; i < spriteIndex[layer]; i++) {
         C2D_Sprite spr;
 	if (_3ds_sprites[layer][i].isRect) {
@@ -79,11 +79,11 @@ static inline void drawSpriteLayer(int layer, bool rightScreen) {
 	}
     }
 
-    if (rightScreen)
+    if (clearIndex)
         spriteIndex[layer] = 0;
 };
 
-static inline void drawTileLayer(int layer, bool rightScreen) {
+static inline void drawTileLayer(int layer, bool rightScreen, bool clearIndex) {
     for (int i = 0; i < tileIndex[layer]; i++) {
 	C2D_Sprite tile;
 	tile.image.tex = &_3ds_tilesetData[paletteIndex];
@@ -97,7 +97,7 @@ static inline void drawTileLayer(int layer, bool rightScreen) {
 	C2D_DrawSprite(&tile);
     }
 
-    if (rightScreen)
+    if (clearIndex)
         tileIndex[layer] = 0;
 }
 
@@ -200,6 +200,7 @@ int InitRenderDevice()
     DebugConsoleInit();
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS * 2);
+    //C2D_SetTintMode(C2D_TintMult);  // not usable with latest stable version
     C2D_Prepare();
     gfxSet3D(true);
     Engine.topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
@@ -370,47 +371,51 @@ void RenderRenderDevice()
 						scaleframe, scaleframe);
         C3D_FrameEnd(0);
     } else {
+	bool clearIndex = (gfxIs3D()) ? false : true;
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
 
         C2D_SceneBegin(Engine.topScreen);
         if (clearScreen) {
     	    C2D_TargetClear(Engine.topScreen, clearColor);
         }
-        drawSpriteLayer(0, false);
-        drawTileLayer(0, false);
-        drawSpriteLayer(1, false);
-        drawTileLayer(1, false);
-        drawSpriteLayer(2, false);
-        drawTileLayer(2, false);
-        drawSpriteLayer(3, false);
-        drawSpriteLayer(4, false);
-        drawTileLayer(3, false);
-        drawSpriteLayer(5, false);
-        drawSpriteLayer(6, false);
+        drawSpriteLayer(0, false, clearIndex);
+        drawTileLayer(0, false, clearIndex);
+        drawSpriteLayer(1, false, clearIndex);
+        drawTileLayer(1, false, clearIndex);
+        drawSpriteLayer(2, false, clearIndex);
+        drawTileLayer(2, false, clearIndex);
+        drawSpriteLayer(3, false, clearIndex);
+        drawSpriteLayer(4, false, clearIndex);
+        drawTileLayer(3, false, clearIndex);
+        drawSpriteLayer(5, false, clearIndex);
+        drawSpriteLayer(6, false, clearIndex);
 
 	if (Engine.showPaletteOverlay)
-	    drawPaletteOverlay(false);
+	    drawPaletteOverlay(clearIndex);
 
-	C2D_SceneBegin(Engine.rightScreen);
-        if (clearScreen) {
-    	    C2D_TargetClear(Engine.rightScreen, clearColor);
-	    clearScreen = 0;
+	if (!clearIndex) {
+	    C2D_SceneBegin(Engine.rightScreen);
+            if (clearScreen) {
+    	        C2D_TargetClear(Engine.rightScreen, clearColor);
+	        clearScreen = 0;
+            }
+
+            drawSpriteLayer(0, true, true);
+            drawTileLayer(0, true, true);
+            drawSpriteLayer(1, true, true);
+            drawTileLayer(1, true, true);
+            drawSpriteLayer(2, true, true);
+            drawTileLayer(2, true, true);
+            drawSpriteLayer(3, true, true);
+            drawSpriteLayer(4, true, true);
+            drawTileLayer(3, true, true);
+            drawSpriteLayer(5, true, true);
+            drawSpriteLayer(6, true, true);
+
+
+	    if (Engine.showPaletteOverlay)
+	        drawPaletteOverlay(true);
         }
-
-        drawSpriteLayer(0, true);
-        drawTileLayer(0, true);
-        drawSpriteLayer(1, true);
-        drawTileLayer(1, true);
-        drawSpriteLayer(2, true);
-        drawTileLayer(2, true);
-        drawSpriteLayer(3, true);
-        drawSpriteLayer(4, true);
-        drawTileLayer(3, true);
-        drawSpriteLayer(5, true);
-        drawSpriteLayer(6, true);
-
-	if (Engine.showPaletteOverlay)
-	    drawPaletteOverlay(true);
 
         C3D_FrameEnd(0);
     }
@@ -957,6 +962,7 @@ void DrawHLineScrollLayer(int layerID)
             if (chunkY++ == layerheight) {
                 chunkY = 0;
                 scrollIndex -= 0x80 * layerheight;
+                //scrollIndex = &lineScroll[(tileYPos / 16) * 16];
             }
 
             tileY = 0;
