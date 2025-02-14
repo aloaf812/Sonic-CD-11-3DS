@@ -24,6 +24,7 @@
 // ================
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 #include <cmath>
 #if RETRO_USE_MOD_LOADER
 #include <regex>
@@ -48,7 +49,8 @@ typedef unsigned int uint;
 // Custom Platforms start here
 #define RETRO_VITA (7)
 #define RETRO_UWP  (8)
-#define RETRO_LINUX (9)
+#define RETRO_3DS  (9)
+#define RETRO_LINUX (10)
 
 // Platform types (Game manages platform-specific code such as HUD position using this rather than the above)
 #define RETRO_STANDARD (0)
@@ -83,6 +85,8 @@ typedef unsigned int uint;
 #define RETRO_PLATFORM (RETRO_ANDROID)
 #elif defined __vita__
 #define RETRO_PLATFORM (RETRO_VITA)
+#elif defined _3DS
+#define RETRO_PLATFORM (RETRO_3DS)
 #elif defined __linux__
 #define RETRO_PLATFORM (RETRO_LINUX)
 #else
@@ -97,6 +101,11 @@ typedef unsigned int uint;
 #define BASE_PATH            ""
 #define DEFAULT_SCREEN_XSIZE 424
 #define DEFAULT_FULLSCREEN   false
+#elif RETRO_PLATFORM == RETRO_3DS
+#define BASE_PATH            "/3ds/SonicCD/"
+#define DEFAULT_SCREEN_XSIZE 400
+#define DEFAULT_FULLSCREEN   true
+#define RETRO_DEFAULTSCALINGMODE 2  // gets the compiler to shut up
 #else
 #ifndef BASE_PATH
 #define BASE_PATH            ""
@@ -115,11 +124,15 @@ typedef unsigned int uint;
   || RETRO_PLATFORM == RETRO_UWP || RETRO_PLATFORM == RETRO_ANDROID || RETRO_PLATFORM == RETRO_LINUX
 
 #ifdef RETRO_USE_SDL2
-#define RETRO_USING_SDL1 (0)
-#define RETRO_USING_SDL2 (1)
+#define RETRO_USING_SDL1       (0)
+#define RETRO_USING_SDL2       (1)
+#define RETRO_USING_C2D        (0)
+#define RETRO_USING_SDL1_AUDIO (0)
 #elif defined(RETRO_USE_SDL1)
-#define RETRO_USING_SDL1 (1)
-#define RETRO_USING_SDL2 (0)
+#define RETRO_USING_SDL1       (1)
+#define RETRO_USING_SDL2       (0)
+#define RETRO_USING_C2D        (0)
+#define RETRO_USING_SDL1_AUDIO (0)
 #elif RETRO_PLATFORM == RETRO_3DS
 #define RETRO_USING_SDL2       (0)
 #define RETRO_USING_SDL1       (0)
