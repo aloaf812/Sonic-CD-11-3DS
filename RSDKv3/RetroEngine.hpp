@@ -106,8 +106,8 @@ typedef unsigned int uint;
 #if RETRO_PLATFORM == RETRO_WIN || RETRO_PLATFORM == RETRO_OSX || RETRO_PLATFORM == RETRO_iOS || RETRO_PLATFORM == RETRO_VITA                        \
   || RETRO_PLATFORM == RETRO_UWP || RETRO_PLATFORM == RETRO_ANDROID
 
-#define RETRO_USING_SDL1       (0)
 #define RETRO_USING_SDL2       (1)
+#define RETRO_USING_SDL1       (0)
 #define RETRO_USING_C2D        (0)
 #define RETRO_USING_SDL1_AUDIO (0)
 #elif RETRO_PLATFORM == RETRO_3DS
@@ -117,8 +117,8 @@ typedef unsigned int uint;
 #define RETRO_USING_SDL1_AUDIO (0)
 #define RETRO_USING_SDLMIXER   (1)
 #else // Since its an else & not an elif these platforms probably aren't supported yet
-#define RETRO_USING_SDL1       (0)
 #define RETRO_USING_SDL2       (0)
+#define RETRO_USING_SDL1       (0)
 #define RETRO_USING_C2D        (0)
 #define RETRO_USING_SDL1_AUDIO (0)
 #endif
@@ -202,6 +202,22 @@ typedef unsigned int uint;
 #error Unspecified RETRO_GAMEPLATFORMID
 #endif
 
+#endif
+
+// compiler errors get thrown if this isn't defined
+#if RETRO_PLATFORM == RETRO_3DS
+#define Sint8  s8
+#define Sint16 s16
+#define Sint32 s32
+#define Sint64 s64
+#define Uint8  u8
+#define Uint16 u16
+#define Uint32 u32
+#define Uint64 u64
+#endif
+
+#ifndef COMMIT
+#define COMMIT "unknown"
 #endif
 
 enum RetroLanguages { RETRO_EN = 0, RETRO_FR = 1, RETRO_IT = 2, RETRO_DE = 3, RETRO_ES = 4, RETRO_JP = 5 };
@@ -297,6 +313,27 @@ enum RetroBytecodeFormat {
 #include <theoraplay.h>
 #endif
 
+#elif RETRO_PLATFORM == RETRO_3DS
+#include <citro2d.h>
+#include <tex3ds.h>
+#include <tremor/ivorbisfile.h>
+#include <tremor/ivorbiscodec.h>
+#include <theora/theora.h>
+#include <theoraplay.h>
+#include <math.h>
+#include <unistd.h>
+#include "3ds/3ds-theoraplayer/source/video.h"
+#include "3ds/3ds-theoraplayer/source/frame.h"
+#if RETRO_USING_SDL1_AUDIO
+#include <SDL/SDL.h>
+#endif
+#endif
+
+#if RETRO_USING_SDLMIXER
+#include <SDL/SDL.h>
+#include <SDL/SDL_mixer.h>
+#endif
+
 #if RETRO_PLATFORM == RETRO_ANDROID
 #include <jni.h>
 #endif
@@ -330,6 +367,13 @@ extern byte renderType;
 #include "ModAPI.hpp"
 #endif
 
+#if RETRO_PLATFORM == RETRO_3DS
+#include "3ds/debug_3ds.hpp"
+#include "3ds/audio_3ds.hpp"
+#include "3ds/render_3ds.hpp"
+#include "3ds/video_3ds.hpp"
+#endif
+
 class RetroEngine
 {
 public:
@@ -352,10 +396,10 @@ public:
     bool initialised = false;
     bool running     = false;
 
-    int gameMode      = 1;
-    int language      = RETRO_EN;
-    int message       = 0;
-    bool highResMode  = false;
+    int gameMode     = 1;
+    int language     = RETRO_EN;
+    int message      = 0;
+    bool highResMode = false;
     bool useFBTexture = false;
 
     bool trialMode      = false;
@@ -452,7 +496,16 @@ public:
     SDL_Texture *videoBuffer    = nullptr;
 #endif
 
+#if RETRO_USING_SDL1 || RETRO_USING_SDL2
     SDL_Event sdlEvents;
+#endif
+
+#if RETRO_PLATFORM == RETRO_3DS
+    // due to the 3DS's limited resolution, image scaling isn't needed here
+    C3D_RenderTarget* topScreen;
+    C3D_RenderTarget* rightScreen;
+    C3D_FrameBuf* videoBuffer;
+#endif
 
 #if RETRO_USING_OPENGL
     SDL_GLContext glContext; // OpenGL context
