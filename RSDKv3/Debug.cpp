@@ -1,15 +1,12 @@
 #include "RetroEngine.hpp"
 
-int touchFlags = 0;
+int touchTimer = 0;
 
 void initDevMenu()
 {
-#if RETRO_USE_MOD_LOADER
-    for (int m = 0; m < modList.size(); ++m) scanModFolder(&modList[m]);
-#endif
     drawStageGFXHQ = false;
-    xScrollOffset  = 0;
-    yScrollOffset  = 0;
+    xScrollOffset = 0;
+    yScrollOffset = 0;
     StopMusic();
     StopAllSfx();
     ReleaseStageSfx();
@@ -19,9 +16,6 @@ void initDevMenu()
     ClearGraphicsData();
     ClearAnimationData();
     LoadPalette("MasterPalette.act", 0, 0, 0, 256);
-#if RETRO_USE_MOD_LOADER
-    Engine.LoadXMLPalettes();
-#endif
     SetActivePalette(0, 0, 256);
     textMenuSurfaceNo = 0;
     LoadGIFFile("Data/Game/SystemText.gif", 0);
@@ -61,17 +55,17 @@ void initDevMenu()
     gameMenu[0].selection2       = 9;
     gameMenu[1].visibleRowCount  = 0;
     gameMenu[1].visibleRowOffset = 0;
-    if (renderType == RENDER_HW) {
-        Engine.highResMode = false;
-        render3DEnabled    = false;
-        UpdateHardwareTextures();
-    }
+#if RETRO_HARDWARE_RENDER && !RETRO_USING_C2D
+    Engine.highResMode = false;
+    render3DEnabled    = false;
+    UpdateHardwareTextures();
+#endif
 }
 void initErrorMessage()
 {
     drawStageGFXHQ = false;
-    xScrollOffset  = 0;
-    yScrollOffset  = 0;
+    xScrollOffset = 0;
+    yScrollOffset = 0;
     StopMusic();
     StopAllSfx();
     ReleaseStageSfx();
@@ -81,9 +75,6 @@ void initErrorMessage()
     ClearGraphicsData();
     ClearAnimationData();
     LoadPalette("MasterPalette.act", 0, 0, 0, 256);
-#if RETRO_USE_MOD_LOADER
-    Engine.LoadXMLPalettes();
-#endif
     SetActivePalette(0, 0, 256);
     textMenuSurfaceNo = 0;
     LoadGIFFile("Data/Game/SystemText.gif", 0);
@@ -95,11 +86,12 @@ void initErrorMessage()
     gameMenu[1].visibleRowCount  = 0;
     gameMenu[1].visibleRowOffset = 0;
     stageMode                    = DEVMENU_SCRIPTERROR;
-    if (renderType == RENDER_HW) {
-        Engine.highResMode = false;
-        render3DEnabled    = false;
-        UpdateHardwareTextures();
-    }
+    touchTimer                   = 0;
+#if RETRO_HARDWARE_RENDER && !RETRO_USING_C2D
+    Engine.highResMode = false;
+    render3DEnabled    = false;
+    UpdateHardwareTextures();
+#endif
 }
 void processStageSelect()
 {
@@ -111,54 +103,44 @@ void processStageSelect()
     CheckKeyDown(&keyDown, 0xFF);
     CheckKeyPress(&keyPress, 0xFF);
 
-    //#if defined RETRO_USING_MOUSE || defined RETRO_USING_TOUCH
+//#if defined RETRO_USING_MOUSE || defined RETRO_USING_TOUCH
     DrawSprite(32, 0x42, 16, 16, 78, 240, textMenuSurfaceNo);
     DrawSprite(32, 0xB2, 16, 16, 95, 240, textMenuSurfaceNo);
     DrawSprite(SCREEN_XSIZE - 32, SCREEN_YSIZE - 32, 16, 16, 112, 240, textMenuSurfaceNo);
-    //#endif
+//#endif
 
     if (!keyDown.start && !keyDown.up && !keyDown.down) {
-        int tFlags = touchFlags;
-        touchFlags = 0;
-
-        for (int t = 0; t < touches; ++t) {
-            if (touchDown[t]) {
-                if (touchX[t] < SCREEN_CENTERX) {
-                    if (touchY[t] >= SCREEN_CENTERY) {
-                        if (!(tFlags & 2))
+        if (touches > 0) {
+            if (touchDown[0] && !(touchTimer % 8)) {
+                if (touchX[0] < SCREEN_CENTERX) {
+                    if (touchY[0] >= SCREEN_CENTERY) {
+                        if (!keyDown.down)
                             keyPress.down = true;
-                        else
-                            touchFlags |= 1 << 1;
+                        keyDown.down = true;
                     }
                     else {
-                        if (!(tFlags & 1))
+                        if (!keyDown.up)
                             keyPress.up = true;
-                        else
-                            touchFlags |= 1 << 0;
+                        keyDown.up = true;
                     }
                 }
-                else if (touchX[t] > SCREEN_CENTERX) {
-                    if (touchY[t] > SCREEN_CENTERY) {
-                        if (!(tFlags & 4))
+                else if (touchX[0] > SCREEN_CENTERX) {
+                    if (touchY[0] > SCREEN_CENTERY) {
+                        if (!keyDown.start)
                             keyPress.start = true;
-                        else
-                            touchFlags |= 1 << 2;
+                        keyDown.start = true;
                     }
                     else {
-                        if (!(tFlags & 8))
+                        if (!keyDown.B)
                             keyPress.B = true;
-                        else
-                            touchFlags |= 1 << 3;
+                        keyDown.B = true;
                     }
                 }
             }
         }
-
-        touchFlags |= (int)keyPress.up << 0;
-        touchFlags |= (int)keyPress.down << 1;
-        touchFlags |= (int)keyPress.start << 2;
-        touchFlags |= (int)keyPress.B << 3;
     }
+
+    touchTimer++;
 
     switch (stageMode) {
         case DEVMENU_MAIN: // Main Menu
@@ -185,9 +167,6 @@ void processStageSelect()
                     ClearGraphicsData();
                     ClearAnimationData();
                     LoadPalette("MasterPalette.act", 0, 0, 0, 256);
-#if RETRO_USE_MOD_LOADER
-                    Engine.LoadXMLPalettes();
-#endif
                     activeStageList   = 0;
                     stageMode         = STAGEMODE_LOAD;
                     Engine.gameMode   = ENGINE_MAINGAME;
@@ -230,7 +209,7 @@ void processStageSelect()
                     gameMenu[0].selectionCount   = 1;
                     gameMenu[1].timer            = 0;
                     gameMenu[1].visibleRowOffset = 0;
-                    stageMode                    = DEVMENU_MODMENU;
+                    stageMode                  = DEVMENU_MODMENU;
                 }
 #endif
                 else {
@@ -241,9 +220,6 @@ void processStageSelect()
                 ClearGraphicsData();
                 ClearAnimationData();
                 LoadPalette("MasterPalette.act", 0, 0, 0, 256);
-#if RETRO_USE_MOD_LOADER
-                Engine.LoadXMLPalettes();
-#endif
                 activeStageList   = 0;
                 stageMode         = STAGEMODE_LOAD;
                 Engine.gameMode   = ENGINE_MAINGAME;
@@ -331,22 +307,22 @@ void processStageSelect()
             DrawTextMenu(&gameMenu[0], SCREEN_CENTERX - 80, 72);
             bool nextMenu = false;
             switch (gameMenu[0].selection2) {
-                case 3: // Presentation
+                case 3: //Presentation
                     if (stageListCount[0] > 0)
                         nextMenu = true;
                     activeStageList = 0;
                     break;
-                case 5: // Regular
+                case 5: //Regular
                     if (stageListCount[1] > 0)
                         nextMenu = true;
                     activeStageList = 1;
                     break;
-                case 7: // Special
+                case 7: //Special
                     if (stageListCount[3] > 0)
                         nextMenu = true;
                     activeStageList = 3;
                     break;
-                case 9: // Bonus
+                case 9: //Bonus
                     if (stageListCount[2] > 0)
                         nextMenu = true;
                     activeStageList = 2;
@@ -371,19 +347,19 @@ void processStageSelect()
                 gameMenu[0].selectionCount   = 1;
                 gameMenu[1].timer            = 0;
                 gameMenu[1].visibleRowOffset = 0;
-                stageMode                    = DEVMENU_STAGESEL;
+                stageMode                  = DEVMENU_STAGESEL;
             }
             else if (keyPress.B) {
                 SetupTextMenu(&gameMenu[0], 0);
                 AddTextMenuEntry(&gameMenu[0], "SELECT A PLAYER");
                 SetupTextMenu(&gameMenu[1], 0);
                 LoadConfigListText(&gameMenu[1], 0);
-                gameMenu[0].alignment       = 2;
-                gameMenu[1].alignment       = 0;
+                gameMenu[0].alignment      = 2;
+                gameMenu[1].alignment      = 0;
                 gameMenu[1].selectionCount  = 1;
                 gameMenu[1].visibleRowCount = 0;
-                gameMenu[1].selection1      = playerListPos;
-                stageMode                   = DEVMENU_PLAYERSEL;
+                gameMenu[1].selection1     = playerListPos;
+                stageMode                  = DEVMENU_PLAYERSEL;
             }
             break;
         }
@@ -495,9 +471,6 @@ void processStageSelect()
                 ClearGraphicsData();
                 ClearAnimationData();
                 LoadPalette("MasterPalette.act", 0, 0, 0, 256);
-#if RETRO_USE_MOD_LOADER
-                Engine.LoadXMLPalettes();
-#endif
                 activeStageList   = 0;
                 stageMode         = DEVMENU_MAIN;
                 Engine.gameMode   = ENGINE_MAINGAME;
@@ -514,7 +487,6 @@ void processStageSelect()
 #if RETRO_USE_MOD_LOADER
         case DEVMENU_MODMENU: // Mod Menu
         {
-            int preOption = gameMenu[1].selection1;
             if (keyDown.down) {
                 gameMenu[1].timer += 1;
                 if (gameMenu[1].timer > 8) {
@@ -546,68 +518,44 @@ void processStageSelect()
                     gameMenu[1].visibleRowOffset -= 1;
                 }
             }
-
             if (gameMenu[1].selection1 >= gameMenu[1].rowCount) {
-                if (keyDown.C) {
-                    gameMenu[1].selection1--;
-                }
-                else {
-                    gameMenu[1].selection1       = 0;
-                    gameMenu[1].visibleRowOffset = 0;
-                }
+                gameMenu[1].selection1       = 0;
+                gameMenu[1].visibleRowOffset = 0;
             }
             if (gameMenu[1].selection1 < 0) {
-                if (keyDown.C) {
-                    gameMenu[1].selection1++;
-                }
-                else {
-                    gameMenu[1].selection1       = gameMenu[1].rowCount - 1;
-                    gameMenu[1].visibleRowOffset = gameMenu[1].rowCount - gameMenu[1].visibleRowCount;
-                }
+                gameMenu[1].selection1       = gameMenu[1].rowCount - 1;
+                gameMenu[1].visibleRowOffset = gameMenu[1].rowCount - gameMenu[1].visibleRowCount;
             }
-            gameMenu[1].selection2 = gameMenu[1].selection1; // its a bug fix LOL
 
             char buffer[0x100];
-            if (gameMenu[1].selection1 < modList.size() && (keyPress.A || keyPress.start || keyPress.left || keyPress.right)) {
-                modList[gameMenu[1].selection1].active ^= 1;
+            if (keyPress.A || keyPress.start || keyPress.left || keyPress.right) {
+                modList[gameMenu[1].selection1].active ^= 1; 
                 StrCopy(buffer, modList[gameMenu[1].selection1].name.c_str());
                 StrAdd(buffer, ": ");
                 StrAdd(buffer, (modList[gameMenu[1].selection1].active ? "  Active" : "Inactive"));
                 EditTextMenuEntry(&gameMenu[1], buffer, gameMenu[1].selection1);
             }
-            if (keyDown.C && gameMenu[1].selection1 != preOption) {
-                int option         = gameMenu[1].selection1;
-                ModInfo swap       = modList[preOption];
-                modList[preOption] = modList[option];
-                modList[option]    = swap;
 
-                SetupTextMenu(&gameMenu[0], 0);
-                AddTextMenuEntry(&gameMenu[0], "MOD LIST");
-                SetupTextMenu(&gameMenu[1], 0);
-
-                char buffer[0x100];
-                for (int m = 0; m < modList.size(); ++m) {
-                    StrCopy(buffer, modList[m].name.c_str());
-                    StrAdd(buffer, ": ");
-                    StrAdd(buffer, modList[m].active ? "  Active" : "Inactive");
-                    AddTextMenuEntry(&gameMenu[1], buffer);
+            if (keyPress.B) {
+                //Reload entire engine
+                Engine.LoadGameConfig("Data/Game/GameConfig.bin");
+#if RETRO_USING_SDL1 || RETRO_USING_SDL2
+                if (Engine.window) {
+                    char gameTitle[0x40];
+                    sprintf(gameTitle, "%s%s", Engine.gameWindowText, Engine.usingDataFile ? "" : " (Using Data Folder)");
+                    SDL_SetWindowTitle(Engine.window, gameTitle);
                 }
+#endif
 
-                gameMenu[1].alignment      = 1;
-                gameMenu[1].selectionCount = 3;
-                gameMenu[1].selection1     = option;
-                if (gameMenu[1].rowCount > 18)
-                    gameMenu[1].visibleRowCount = 18;
-                else
-                    gameMenu[1].visibleRowCount = 0;
+                ReleaseGlobalSfx();
+                LoadGlobalSfx();
 
-                gameMenu[0].alignment        = 2;
-                gameMenu[0].selectionCount   = 1;
-                gameMenu[1].timer            = 0;
-                gameMenu[1].visibleRowOffset = 0;
-            }
-            else if (keyPress.B) {
-                RefreshEngine();
+                forceUseScripts = false;
+                for (int m = 0; m < modList.size(); ++m) {
+                    if (modList[m].useScripts && modList[m].active)
+                        forceUseScripts = true;
+                }
+                saveMods();
 
                 stageMode = DEVMENU_MAIN;
                 SetupTextMenu(&gameMenu[0], 0);
@@ -627,10 +575,8 @@ void processStageSelect()
                 AddTextMenuEntry(&gameMenu[0], " ");
                 AddTextMenuEntry(&gameMenu[0], "STAGE SELECT");
                 AddTextMenuEntry(&gameMenu[0], " ");
-#if RETRO_USE_MOD_LOADER
                 AddTextMenuEntry(&gameMenu[0], "MODS");
                 AddTextMenuEntry(&gameMenu[0], " ");
-#endif
                 AddTextMenuEntry(&gameMenu[0], "EXIT GAME");
                 gameMenu[0].alignment        = 2;
                 gameMenu[0].selectionCount   = 2;
@@ -647,9 +593,8 @@ void processStageSelect()
 #endif
         default: break;
     }
-
-    if (renderType == RENDER_HW) {
-        gfxIndexSizeOpaque  = gfxIndexSize;
-        gfxVertexSizeOpaque = gfxVertexSize;
-    }
+#if RETRO_HARDWARE_RENDER && !RETRO_USING_C2D
+    gfxIndexSizeOpaque  = gfxIndexSize;
+    gfxVertexSizeOpaque = gfxVertexSize;
+#endif
 }
