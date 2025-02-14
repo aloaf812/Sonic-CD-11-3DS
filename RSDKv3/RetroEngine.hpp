@@ -198,6 +198,8 @@ typedef unsigned int uint;
 #define RETRO_GAMEPLATFORMID (RETRO_WIN)
 #elif RETRO_PLATFORM == RETRO_UWP
 #define RETRO_GAMEPLATFORMID (UAP_GetRetroGamePlatformId())
+#elif RETRO_PLATFORM == RETRO_3DS
+#define RETRO_GAMEPLATFORMID (RETRO_WIN)
 #else
 #error Unspecified RETRO_GAMEPLATFORMID
 #endif
@@ -311,7 +313,6 @@ enum RetroBytecodeFormat {
 #include <vorbis/vorbisfile.h>
 #include <theora/theora.h>
 #include <theoraplay.h>
-#endif
 
 #elif RETRO_PLATFORM == RETRO_3DS
 #include <citro2d.h>
