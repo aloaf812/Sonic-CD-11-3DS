@@ -4,3 +4,9 @@
 [submodule "RSDKv3/3ds/3ds-theoraplayer"]
 	path = RSDKv3/3ds/3ds-theoraplayer
 	url = https://github.com/SaturnSH2x2/3ds-theoraplayer
+[submodule "dependencies/all/tinyxml2"]
+	path = dependencies/all/tinyxml2
+	url = https://github.com/leethomason/tinyxml2
+[submodule "flatpak/shared-modules"]
+	path = flatpak/shared-modules
+	url = https://github.com/flathub/shared-modules.git
