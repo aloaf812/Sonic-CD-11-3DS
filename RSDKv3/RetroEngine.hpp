@@ -112,17 +112,26 @@ typedef unsigned int uint;
 #endif
 
 #if RETRO_PLATFORM == RETRO_WIN || RETRO_PLATFORM == RETRO_OSX || RETRO_PLATFORM == RETRO_iOS || RETRO_PLATFORM == RETRO_VITA                        \
-    || RETRO_PLATFORM == RETRO_UWP || RETRO_PLATFORM == RETRO_ANDROID || RETRO_PLATFORM == RETRO_LINUX
+  || RETRO_PLATFORM == RETRO_UWP || RETRO_PLATFORM == RETRO_ANDROID || RETRO_PLATFORM == RETRO_LINUX
+
 #ifdef RETRO_USE_SDL2
 #define RETRO_USING_SDL1 (0)
 #define RETRO_USING_SDL2 (1)
 #elif defined(RETRO_USE_SDL1)
 #define RETRO_USING_SDL1 (1)
 #define RETRO_USING_SDL2 (0)
+#elif RETRO_PLATFORM == RETRO_3DS
+#define RETRO_USING_SDL2       (0)
+#define RETRO_USING_SDL1       (0)
+#define RETRO_USING_C2D        (1)
+#define RETRO_USING_SDL1_AUDIO (0)
+#define RETRO_USING_SDLMIXER   (1)
 #endif
 #else // Since its an else & not an elif these platforms probably aren't supported yet
-#define RETRO_USING_SDL1 (0)
-#define RETRO_USING_SDL2 (0)
+#define RETRO_USING_SDL2       (0)
+#define RETRO_USING_SDL1       (0)
+#define RETRO_USING_C2D        (0)
+#define RETRO_USING_SDL1_AUDIO (0)
 #endif
 
 #if RETRO_PLATFORM == RETRO_iOS || RETRO_PLATFORM == RETRO_ANDROID || RETRO_PLATFORM == RETRO_WP7
