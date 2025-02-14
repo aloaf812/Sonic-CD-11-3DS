@@ -25,6 +25,11 @@ void initDevMenu()
     SetActivePalette(0, 0, 256);
     textMenuSurfaceNo = 0;
     LoadGIFFile("Data/Game/SystemText.gif", 0);
+#if RETRO_USING_C2D
+    gfxSet3D(false);
+    _3ds_delSpriteSurface(0);
+    _3ds_cacheSpriteSurface(0);
+#endif
     SetPaletteEntry(-1, 0xF0, 0x00, 0x00, 0x00);
     SetPaletteEntry(-1, 0xFF, 0xFF, 0xFF, 0xFF);
     stageMode = DEVMENU_MAIN;
