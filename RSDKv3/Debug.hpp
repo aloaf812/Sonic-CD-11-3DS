@@ -5,7 +5,7 @@
 #include <android/log.h>
 #endif
 
-inline void PrintLog(const char *msg, ...)
+inline void printLog(const char *msg, ...)
 {
     if (engineDebugMode) {
         char buffer[0x100];
@@ -20,15 +20,7 @@ inline void PrintLog(const char *msg, ...)
         char pathBuffer[0x100];
 #if RETRO_PLATFORM == RETRO_OSX || RETRO_PLATFORM == RETRO_UWP
         if (!usingCWD)
-#if RETRO_PLATFORM == RETRO_OSX
-        {
-            char logBuffer[0x100];
-            getResourcesPath(logBuffer, sizeof(logBuffer));
-            sprintf(pathBuffer, "%s/log.txt", logBuffer);
-        }
-#else
             sprintf(pathBuffer, "%s/log.txt", getResourcesPath());
-#endif
         else
             sprintf(pathBuffer, "log.txt");
 #elif RETRO_PLATFORM == RETRO_ANDROID
@@ -51,13 +43,11 @@ enum DevMenuMenus {
     DEVMENU_STAGELISTSEL,
     DEVMENU_STAGESEL,
     DEVMENU_SCRIPTERROR,
-#if RETRO_USE_MOD_LOADER
     DEVMENU_MODMENU,
-#endif
 };
 
-void InitDevMenu();
-void InitErrorMessage();
-void ProcessStageSelect();
+void initDevMenu();
+void initErrorMessage();
+void processStageSelect();
 
 #endif //! DEBUG_H
