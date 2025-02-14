@@ -9,9 +9,10 @@ int SCREEN_XSIZE = 400;
 int SCREEN_CENTERX = 200;
 int SCREEN_XSIZE_CONFIG = 400;
 #else
-int SCREEN_XSIZE        = 424;
-int SCREEN_CENTERX      = 424 / 2;
+int SCREEN_XSIZE   = 424;
+int SCREEN_CENTERX = 424 / 2;
 int SCREEN_XSIZE_CONFIG = 424;
+#endif
 
 #if RETRO_USING_C2D
 int spriteLayerToDraw = 0;
