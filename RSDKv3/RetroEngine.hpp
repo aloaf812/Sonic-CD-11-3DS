@@ -393,6 +393,27 @@ enum RetroBytecodeFormat {
 #include <theoraplay.h>
 #endif
 
+#elif RETRO_PLATFORM == RETRO_3DS
+#include <citro2d.h>
+#include <tex3ds.h>
+#include <tremor/ivorbisfile.h>
+#include <tremor/ivorbiscodec.h>
+#include <theora/theora.h>
+#include <theoraplay.h>
+#include <math.h>
+#include <unistd.h>
+#include "3ds/3ds-theoraplayer/source/video.h"
+#include "3ds/3ds-theoraplayer/source/frame.h"
+#if RETRO_USING_SDL1_AUDIO
+#include <SDL/SDL.h>
+#endif
+#endif
+
+#if RETRO_USING_SDLMIXER
+#include <SDL/SDL.h>
+#include <SDL/SDL_mixer.h>
+#endif
+
 #if RETRO_PLATFORM == RETRO_ANDROID
 #include <jni.h>
 #endif
@@ -423,6 +444,13 @@ extern byte renderType;
 #include "Userdata.hpp"
 #include "Debug.hpp"
 #include "ModAPI.hpp"
+
+#if RETRO_PLATFORM == RETRO_3DS
+#include "3ds/debug_3ds.hpp"
+#include "3ds/audio_3ds.hpp"
+#include "3ds/render_3ds.hpp"
+#include "3ds/video_3ds.hpp"
+#endif
 
 class RetroEngine
 {
@@ -572,7 +600,16 @@ public:
     SDL_Texture *videoBuffer    = nullptr;
 #endif
 
+#if RETRO_USING_SDL1 || RETRO_USING_SDL2
     SDL_Event sdlEvents;
+#endif
+
+#if RETRO_PLATFORM == RETRO_3DS
+    // due to the 3DS's limited resolution, image scaling isn't needed here
+    C3D_RenderTarget* topScreen;
+    C3D_RenderTarget* rightScreen;
+    C3D_FrameBuf* videoBuffer;
+#endif
 
 #if RETRO_USING_OPENGL
     SDL_GLContext glContext; // OpenGL context
