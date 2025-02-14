@@ -208,6 +208,24 @@ int InitRenderDevice()
 
 #endif
 
+#if RETRO_USING_C2D
+    gfxInitDefault();
+    DebugConsoleInit();
+    C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
+    C2D_Init(C2D_DEFAULT_MAX_OBJECTS * 2);
+    //C2D_SetTintMode(C2D_TintMult);  // not usable with latest stable version
+    C2D_Prepare();
+    gfxSet3D(true);
+    Engine.topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
+    Engine.rightScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_RIGHT);
+    clearColor = C2D_Color32f(0.0f, 0.0f, 0.0f, 1.0f);
+    ClearScreen(0);
+#elif RETRO_PLATFORM == RETRO_3DS && !RETRO_USING_C2D
+    gfxInitDefault();
+    DebugConsoleInit(); 
+    gfxSetScreenFormat(GFX_TOP, GSP_RGB565_OES);
+#endif
+
 #if RETRO_USING_SDL1
     SDL_Init(SDL_INIT_EVERYTHING);
 
