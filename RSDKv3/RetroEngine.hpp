@@ -73,7 +73,7 @@ typedef unsigned int uint;
 #error "Unknown Apple platform"
 #endif
 #elif defined __ANDROID__
-#define RETRO_PLATFORM (RETRO_ANDROID)
+#define RETRO_PLATFORM   (RETRO_ANDROID)
 #elif defined __vita__
 #define RETRO_PLATFORM (RETRO_VITA)
 #elif defined _3DS
@@ -96,11 +96,14 @@ typedef unsigned int uint;
 #define DEFAULT_FULLSCREEN   true
 #define RETRO_DEFAULTSCALINGMODE 2  // gets the compiler to shut up
 #else
-#define BASE_PATH ""
+#define BASE_PATH            ""
 #define RETRO_USING_MOUSE
 #define RETRO_USING_TOUCH
 #define DEFAULT_SCREEN_XSIZE 424
 #define DEFAULT_FULLSCREEN   false
+
+// set this to 1 (integer scale) for other platforms that don't support bilinear and don't have an even screen size
+#define RETRO_DEFAULTSCALINGMODE 2
 #endif
 
 #if RETRO_PLATFORM == RETRO_WIN || RETRO_PLATFORM == RETRO_OSX || RETRO_PLATFORM == RETRO_iOS || RETRO_PLATFORM == RETRO_VITA                        \
@@ -131,66 +134,39 @@ typedef unsigned int uint;
 #define RETRO_GAMEPLATFORM (RETRO_STANDARD)
 #endif
 
-// shut up compiler
-#define RETRO_USING_OPENGL (0)
-
-#if RETRO_USING_OPENGL
-#if RETRO_PLATFORM == RETRO_ANDROID
-#define GL_GLEXT_PROTOTYPES
-
-#include <GLES/gl.h>
-#include <GLES/glext.h>
-
-#undef glGenFramebuffers
-#undef glBindFramebuffers
-#undef glFramebufferTexture2D
-
-#undef GL_FRAMEBUFFER
-#undef GL_COLOR_ATTACHMENT0
-#undef GL_FRAMEBUFFER_BINDING
-
-#define glGenFramebuffers      glGenFramebuffersOES
-#define glBindFramebuffer      glBindFramebufferOES
-#define glFramebufferTexture2D glFramebufferTexture2DOES
-#define glDeleteFramebuffers   glDeleteFramebuffersOES
-#define glOrtho                glOrthof
-
-#define GL_FRAMEBUFFER         GL_FRAMEBUFFER_OES
-#define GL_COLOR_ATTACHMENT0   GL_COLOR_ATTACHMENT0_OES
-#define GL_FRAMEBUFFER_BINDING GL_FRAMEBUFFER_BINDING_OES
-#elif RETRO_PLATFORM == RETRO_OSX
-#define GL_GLEXT_PROTOTYPES
-#define GL_SILENCE_DEPRECATION
-
-#include <OpenGL/gl.h>
-#include <OpenGL/glext.h>
-
-#undef glGenFramebuffers
-#undef glBindFramebuffer
-#undef glFramebufferTexture2D
-#undef glDeleteFramebuffers
-
-#undef GL_FRAMEBUFFER
-#undef GL_COLOR_ATTACHMENT0
-#undef GL_FRAMEBUFFER_BINDING
-
-#define glGenFramebuffers      glGenFramebuffersEXT
-#define glBindFramebuffer      glBindFramebufferEXT
-#define glFramebufferTexture2D glFramebufferTexture2DEXT
-#define glDeleteFramebuffers   glDeleteFramebuffersEXT
-
-#define GL_FRAMEBUFFER         GL_FRAMEBUFFER_EXT
-#define GL_COLOR_ATTACHMENT0   GL_COLOR_ATTACHMENT0_EXT
-#define GL_FRAMEBUFFER_BINDING GL_FRAMEBUFFER_BINDING_EXT
+#define RETRO_SW_RENDER  (1)
+#define RETRO_HW_RENDER  (0)
+#if RETRO_USING_C2D
+#define RETRO_RENDERTYPE (RETRO_HW_RENDER)
 #else
+#define RETRO_RENDERTYPE (RETRO_SW_RENDER)
+#endif
+
+#ifdef USE_SW_REN
+#undef RETRO_RENDERTYPE
+#define RETRO_RENDERTYPE (RETRO_SW_RENDER)
+#endif
+
+#ifdef USE_HW_REN
+#undef RETRO_RENDERTYPE
+#define RETRO_RENDERTYPE (RETRO_HW_RENDER)
+#endif
+
+#if RETRO_RENDERTYPE == RETRO_SW_RENDER
+#define RETRO_USING_OPENGL (0)
+#elif RETRO_RENDERTYPE == RETRO_HW_RENDER && !RETRO_USING_C2D
+#define RETRO_USING_OPENGL (1)
+#endif
+
+#define RETRO_SOFTWARE_RENDER (RETRO_RENDERTYPE == RETRO_SW_RENDER)
+#define RETRO_HARDWARE_RENDER (RETRO_RENDERTYPE == RETRO_HW_RENDER)
+
 #if RETRO_USING_OPENGL
 #include <GL/glew.h>
 #include <GL/glu.h>
 
 #if RETRO_USING_SDL2
 #include <SDL_opengl.h>
-#endif
-#endif
 #endif
 #endif
 
@@ -211,6 +187,15 @@ typedef unsigned int uint;
 #error Unspecified RETRO_GAMEPLATFORMID
 #endif
 
+#endif
+
+// this macro defines the touch device read by the game (UWP requires DIRECT)
+#if defined(RETRO_UWP) && defined(SDL_TOUCH_DEVICE_DIRECT)
+#define RETRO_TOUCH_DEVICE SDL_TOUCH_DEVICE_DIRECT
+#elif defined(SDL_TOUCH_DEVICE_INDIRECT_ABSOLUTE)
+#define RETRO_TOUCH_DEVICE SDL_TOUCH_DEVICE_INDIRECT_ABSOLUTE
+#else
+#define RETRO_TOUCH_DEVICE 0
 #endif
 
 // compiler errors get thrown if this isn't defined
@@ -246,7 +231,6 @@ enum RetroStates {
 
 enum RetroEngineMessages {
     MESSAGE_NONE      = 0,
-    MESSAGE_MESSAGE_1 = 1,
     MESSAGE_LOSTFOCUS = 2,
     MESSAGE_MESSAGE_3 = 3,
     MESSAGE_MESSAGE_4 = 4,
@@ -269,18 +253,8 @@ enum RetroEngineCallbacks {
     CALLBACK_PAUSE_REQUESTED         = 13,
     CALLBACK_FULL_VERSION_ONLY       = 14,
     CALLBACK_STAFF_CREDITS           = 15,
-    CALLBACK_MOREGAMES               = 16,
+    CALLBACK_16                      = 16,
     CALLBACK_AGEGATE                 = 100,
-#if RETRO_USE_MOD_LOADER
-    // Mod CBs start at 0x1000
-    CALLBACK_SET1P = 0x1001,
-    CALLBACK_SET2P = 0x1002,
-#endif
-};
-
-enum RetroRenderTypes {
-    RENDER_SW = 0,
-    RENDER_HW = 1,
 };
 
 enum RetroBytecodeFormat {
@@ -348,7 +322,6 @@ enum RetroBytecodeFormat {
 
 extern bool usingCWD;
 extern bool engineDebugMode;
-extern byte renderType;
 
 // Utils
 #include "Ini.hpp"
@@ -371,9 +344,6 @@ extern byte renderType;
 #include "Video.hpp"
 #include "Userdata.hpp"
 #include "Debug.hpp"
-#if RETRO_USE_MOD_LOADER
-#include "ModAPI.hpp"
-#endif
 
 #if RETRO_PLATFORM == RETRO_3DS
 #include "3ds/debug_3ds.hpp"
@@ -408,7 +378,6 @@ public:
     int language     = RETRO_EN;
     int message      = 0;
     bool highResMode = false;
-    bool useFBTexture = false;
 
     bool trialMode      = false;
     bool onlineActive   = true;
@@ -434,21 +403,13 @@ public:
     float dimMax         = 1.0;
 
     bool showPaletteOverlay = false;
-    bool useHQModes         = true;
+    bool useHQModes         = false;
 #endif
 
-    void Init();
+    bool Init();
     void Run();
 
-    bool LoadGameConfig(const char *filepath);
-#if RETRO_USE_MOD_LOADER
-    void LoadXMLVariables();
-    void LoadXMLPalettes();
-    void LoadXMLObjects();
-    void LoadXMLSoundFX();
-    void LoadXMLPlayers(TextMenu *menu);
-    void LoadXMLStages(TextMenu *menu, int listNo);
-#endif
+    bool LoadGameConfig(const char *Filepath);
 
     int callbackMessage = 0;
     int prevMessage     = 0;
@@ -457,32 +418,28 @@ public:
 
     char gameWindowText[0x40];
     char gameDescriptionText[0x100];
-    const char *gameVersion = "1.3.0";
+    const char *gameVersion = "1.1.2";
     const char *gamePlatform;
 
-    const char *gameRenderTypes[2] = { "SW_Rendering", "HW_Rendering" };
+#if RETRO_SOFTWARE_RENDER
+    const char *gameRenderType = "SW_Rendering";
+#elif RETRO_HARDWARE_RENDER
+    const char *gameRenderType = "HW_Rendering";
+#endif
 
-    const char *gameRenderType = gameRenderTypes[RENDER_SW];
-
-    // No_Haptics is default for pc but people with controllers exist
 #if RETRO_USE_HAPTICS
-    const char *gameHapticSetting = "Use_Haptics";
-#else
-    const char *gameHapticSetting = "No_Haptics";
+    const char *gameHapticSetting = "Use_Haptics"; // No_Haptics is default for pc but people with controllers exist
 #endif
 
     ushort *frameBuffer   = nullptr;
     ushort *frameBuffer2x = nullptr;
-
-    uint *texBuffer   = nullptr;
-    uint *texBuffer2x = nullptr;
 
     bool isFullScreen = false;
 
     bool startFullScreen  = false; // if should start as fullscreen
     bool borderless       = false;
     bool vsync            = false;
-    int scalingMode       = 0;
+    int scalingMode       = RETRO_DEFAULTSCALINGMODE;
     int windowScale       = 2;
     int refreshRate       = 60; // user-picked screen update rate
     int screenRefreshRate = 60; // hardware screen update rate
@@ -496,12 +453,13 @@ public:
     int windowYSize; // height of window/screen in the previous frame
 
 #if RETRO_USING_SDL2
-    SDL_Window *window = nullptr;
-#if !RETRO_USING_OPENGL
+    SDL_Window *window          = nullptr;
     SDL_Renderer *renderer      = nullptr;
+#if RETRO_SOFTWARE_RENDER
     SDL_Texture *screenBuffer   = nullptr;
     SDL_Texture *screenBuffer2x = nullptr;
     SDL_Texture *videoBuffer    = nullptr;
+#endif
 #endif
 
 #if RETRO_USING_SDL1 || RETRO_USING_SDL2
@@ -516,10 +474,9 @@ public:
 #endif
 
 #if RETRO_USING_OPENGL
-    SDL_GLContext glContext; // OpenGL context
+    SDL_GLContext m_glContext; // OpenGL context
 #endif
 
-#endif
 
 #if RETRO_USING_SDL1
     SDL_Surface *windowSurface = nullptr;
