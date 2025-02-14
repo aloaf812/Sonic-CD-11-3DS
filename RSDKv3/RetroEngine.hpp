@@ -19,6 +19,7 @@
 // ================
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 #include <cmath>
 
 // ================
@@ -40,6 +41,7 @@ typedef unsigned int uint;
 // Custom Platforms start here
 #define RETRO_VITA (7)
 #define RETRO_UWP  (8)
+#define RETRO_3DS  (9)
 
 // Platform types (Game manages platform-specific code such as HUD position using this rather than the above)
 #define RETRO_STANDARD (0)
@@ -74,6 +76,8 @@ typedef unsigned int uint;
 #define RETRO_PLATFORM (RETRO_ANDROID)
 #elif defined __vita__
 #define RETRO_PLATFORM (RETRO_VITA)
+#elif defined _3DS
+#define RETRO_PLATFORM (RETRO_3DS)
 #else
 #define RETRO_PLATFORM (RETRO_WIN) // Default
 #endif
@@ -86,6 +90,11 @@ typedef unsigned int uint;
 #define BASE_PATH            ""
 #define DEFAULT_SCREEN_XSIZE 424
 #define DEFAULT_FULLSCREEN   false
+#elif RETRO_PLATFORM == RETRO_3DS
+#define BASE_PATH            "/3ds/SonicCD/"
+#define DEFAULT_SCREEN_XSIZE 400
+#define DEFAULT_FULLSCREEN   true
+#define RETRO_DEFAULTSCALINGMODE 2  // gets the compiler to shut up
 #else
 #define BASE_PATH ""
 #define RETRO_USING_MOUSE
@@ -95,12 +104,23 @@ typedef unsigned int uint;
 #endif
 
 #if RETRO_PLATFORM == RETRO_WIN || RETRO_PLATFORM == RETRO_OSX || RETRO_PLATFORM == RETRO_iOS || RETRO_PLATFORM == RETRO_VITA                        \
-    || RETRO_PLATFORM == RETRO_UWP || RETRO_PLATFORM == RETRO_ANDROID
-#define RETRO_USING_SDL1 (0)
-#define RETRO_USING_SDL2 (1)
+  || RETRO_PLATFORM == RETRO_UWP || RETRO_PLATFORM == RETRO_ANDROID
+
+#define RETRO_USING_SDL1       (0)
+#define RETRO_USING_SDL2       (1)
+#define RETRO_USING_C2D        (0)
+#define RETRO_USING_SDL1_AUDIO (0)
+#elif RETRO_PLATFORM == RETRO_3DS
+#define RETRO_USING_SDL2       (0)
+#define RETRO_USING_SDL1       (0)
+#define RETRO_USING_C2D        (1)
+#define RETRO_USING_SDL1_AUDIO (0)
+#define RETRO_USING_SDLMIXER   (1)
 #else // Since its an else & not an elif these platforms probably aren't supported yet
-#define RETRO_USING_SDL1 (0)
-#define RETRO_USING_SDL2 (0)
+#define RETRO_USING_SDL1       (0)
+#define RETRO_USING_SDL2       (0)
+#define RETRO_USING_C2D        (0)
+#define RETRO_USING_SDL1_AUDIO (0)
 #endif
 
 #if RETRO_PLATFORM == RETRO_iOS || RETRO_PLATFORM == RETRO_ANDROID || RETRO_PLATFORM == RETRO_WP7
