@@ -182,8 +182,14 @@ typedef unsigned int uint;
 #define GL_COLOR_ATTACHMENT0   GL_COLOR_ATTACHMENT0_EXT
 #define GL_FRAMEBUFFER_BINDING GL_FRAMEBUFFER_BINDING_EXT
 #else
+#if RETRO_USING_OPENGL
 #include <GL/glew.h>
 #include <GL/glu.h>
+
+#if RETRO_USING_SDL2
+#include <SDL_opengl.h>
+#endif
+#endif
 #endif
 #endif
 
