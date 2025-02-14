@@ -44,6 +44,81 @@ static inline void CopyToFramebuffer(u16* buffer) {
 }
 #endif
 
+#if RETRO_USING_C2D
+static int tileStereoOffset[7] = {
+	9, 6, 4, 2, 0, 0, 0
+};
+
+static int spriteStereoOffset[7] = {
+	9, 8, 6, 4, 2, 2, 0
+};
+
+static inline void drawSpriteLayer(int layer, bool rightScreen, bool clearIndex) {
+    for (int i = 0; i < spriteIndex[layer]; i++) {
+        C2D_Sprite spr;
+	if (_3ds_sprites[layer][i].isRect) {
+            _3ds_rectangle r = _3ds_sprites[layer][i].rect;
+	    int offset = rightScreen ? (int) (osGet3DSliderState() * spriteStereoOffset[layer]) : 0;
+            C2D_DrawRectSolid(r.x + offset, r.y, 0, r.w, r.h, r.color);
+	} else if (_3ds_sprites[layer][i].isQuad) {
+	    _3ds_quad q = _3ds_sprites[layer][i].quad;
+	    int offset = rightScreen ? (int) (osGet3DSliderState() * spriteStereoOffset[layer]) : 0;
+	    // draw two triangles, ACD and ABD
+	    C2D_DrawTriangle(  q.vList[0].x + offset, q.vList[0].y, q.color,
+			       q.vList[2].x + offset, q.vList[2].y, q.color,
+			       q.vList[3].x + offset, q.vList[3].y, q.color, 0  );
+	    C2D_DrawTriangle(  q.vList[0].x + offset, q.vList[0].y, q.color,
+			       q.vList[1].x + offset, q.vList[1].y, q.color,
+			       q.vList[3].x + offset, q.vList[3].y, q.color, 0 );
+        } else {
+	    spr.image.tex    = &_3ds_textureData[_3ds_sprites[layer][i].sid];
+	    spr.image.subtex = &_3ds_sprites[layer][i].subtex;
+	    spr.params       = _3ds_sprites[layer][i].params;
+
+	    if (rightScreen) {
+	        spr.params.pos.x += (int) (osGet3DSliderState() * spriteStereoOffset[layer]);
+	    }
+
+            C2D_DrawSpriteTinted(&spr, &_3ds_sprites[layer][i].tint);
+	}
+    }
+
+    if (clearIndex)
+        spriteIndex[layer] = 0;
+};
+
+static inline void drawTileLayer(int layer, bool rightScreen, bool clearIndex) {
+    for (int i = 0; i < tileIndex[layer]; i++) {
+	C2D_Sprite tile;
+	tile.image.tex = &_3ds_tilesetData[paletteIndex];
+	tile.image.subtex = &_3ds_tiles[layer][i].subtex;
+	tile.params = _3ds_tiles[layer][i].params;
+
+	if (rightScreen) {
+            tile.params.pos.x += (int) (osGet3DSliderState() * tileStereoOffset[layer]);
+	}
+
+	C2D_DrawSprite(&tile);
+    }
+
+    if (clearIndex)
+        tileIndex[layer] = 0;
+}
+
+static inline void drawPaletteOverlay(bool rightScreen) {
+    for (int p = 0; p < PALETTE_COUNT; ++p) {
+        int x = (SCREEN_XSIZE - (0xF << 3)) + rightScreen ? (int) (-2 * osGet3DSliderState()) : 0;
+        int y = (SCREEN_YSIZE - (0xF << 2));
+        for (int c = 0; c < PALETTE_SIZE; ++c) {
+	    C2D_DrawRectSolid(x + ((c & 0xF) << 1) + ((p % (PALETTE_COUNT / 2)) * (2 * 16)),
+                              y + ((c >> 4) << 1) + ((p / (PALETTE_COUNT / 2)) * (2 * 16)), 0, 2, 2, 
+			      C2D_Color32(fullPalette32[p][c].r, fullPalette32[p][c].g,
+				      fullPalette32[p][c].b, 0xff));
+        }
+    }
+}
+#endif
+
 DrawVertex gfxPolyList[VERTEX_LIMIT];
 short gfxPolyListIndex[INDEX_LIMIT];
 ushort gfxVertexSize       = 0;
