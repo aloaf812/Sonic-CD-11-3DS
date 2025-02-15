@@ -5,7 +5,7 @@
 
 #include <vorbis/vorbisfile.h>
 
-#if RETRO_PLATFORM != RETRO_VITA && RETRO_PLATFORM != RETRO_OSX
+#if RETRO_PLATFORM != RETRO_VITA && RETRO_PLATFORM != RETRO_OSX && RETRO_PLATFORM != RETRO_3DS
 #include "SDL.h"
 #endif
 
@@ -44,6 +44,14 @@ struct StreamInfo {
 #endif
 #if RETRO_USING_SDL2
     SDL_AudioStream *stream;
+// TODO: this is only here to make the compiler shut up,
+// come up with a proper implementation later
+#elif RETRO_PLATFORM == RETRO_3DS
+    char* musicFile;
+    void* stream;
+    void* currentTrack;
+    int pos;
+    int len;
 #endif
     Sint16 buffer[MIX_BUFFER_SAMPLES];
     bool trackLoop;
@@ -57,6 +65,10 @@ struct SFXInfo {
     size_t length;
     bool loaded;
 };
+
+#if RETRO_USING_SDLMIXER
+    Mix_Chunk* chunk;
+#endif
 
 struct ChannelInfo {
     size_t sampleLength;
@@ -152,20 +164,30 @@ void SetMusicTrack(char *filePath, byte trackID, bool loop, uint loopPoint);
 bool PlayMusic(int track);
 inline void StopMusic()
 {
+#if RETRO_USING_SDLMIXER
+    Mix_HaltMusic();
     musicStatus = MUSIC_STOPPED;
-    FreeMusInfo();
+    freeMusInfo();
+#else
+    musicStatus = MUSIC_STOPPED;
+    freeMusInfo();
+#endif
 }
 
 void LoadSfx(char *filePath, byte sfxID);
 void PlaySfx(int sfx, bool loop);
 inline void StopSfx(int sfx)
 {
+#if RETRO_USING_SDLMIXER
+    Mix_HaltChannel(-1);
+#else
     for (int i = 0; i < CHANNEL_COUNT; ++i) {
         if (sfxChannels[i].sfxID == sfx) {
             MEM_ZERO(sfxChannels[i]);
             sfxChannels[i].sfxID = -1;
         }
     }
+#endif
 }
 void SetSfxAttributes(int sfx, int loopCount, sbyte pan);
 
@@ -176,10 +198,17 @@ inline void SetMusicVolume(int volume)
     if (volume > MAX_VOLUME)
         volume = MAX_VOLUME;
     masterVolume = volume;
+
+#if RETRO_USING_SDLMIXER
+    Mix_VolumeMusic((int) volume * 1.28);
+#endif
 }
 
 inline bool PauseSound()
 {
+#if RETRO_USING_SDLMIXER
+	Mix_PauseMusic();
+#endif
     if (musicStatus == MUSIC_PLAYING) {
         musicStatus = MUSIC_PAUSED;
         return true;
@@ -189,6 +218,10 @@ inline bool PauseSound()
 
 inline void ResumeSound()
 {
+#if RETRO_USING_SDLMIXER
+    Mix_ResumeMusic();
+#endif
+
     if (musicStatus == MUSIC_PAUSED)
         musicStatus = MUSIC_PLAYING;
 }
