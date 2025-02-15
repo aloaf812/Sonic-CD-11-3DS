@@ -53,16 +53,16 @@ void InitGifDecoder()
     gifDecoder.stackPtr       = 0;
     gifDecoder.prevCode       = NO_SUCH_CODE;
     gifDecoder.shiftState     = 0;
-    gifDecoder.shiftData      = 0u;
+    gifDecoder.shiftData      = 0;
     for (int i = 0; i <= LZ_MAX_CODE; ++i) gifDecoder.prefix[i] = (byte)NO_SUCH_CODE;
 }
 void ReadGifLine(byte *line, int length, int offset)
 {
     int i         = 0;
-    int stackPtr       = gifDecoder.stackPtr;
+    int stackPtr  = gifDecoder.stackPtr;
     int eofCode   = gifDecoder.eofCode;
     int clearCode = gifDecoder.clearCode;
-    int prevCode      = gifDecoder.prevCode;
+    int prevCode  = gifDecoder.prevCode;
     if (stackPtr != 0) {
         while (stackPtr != 0) {
             if (i >= length) {
@@ -115,7 +115,7 @@ void ReadGifLine(byte *line, int length, int offset)
                     int c = 0;
                     while (c++ <= LZ_MAX_CODE && code > clearCode && code <= LZ_MAX_CODE) {
                         gifDecoder.stack[stackPtr++] = gifDecoder.suffix[code];
-                        code                    = gifDecoder.prefix[code];
+                        code                         = gifDecoder.prefix[code];
                     }
                     if (c >= LZ_MAX_CODE | code > LZ_MAX_CODE) {
                         return;
@@ -219,7 +219,7 @@ int AddGraphicsFile(const char *filePath)
     while (StrLength(gfxSurface[sheetID].fileName) > 0) {
         if (StrComp(gfxSurface[sheetID].fileName, sheetPath))
             return sheetID;
-        if (++sheetID == SURFACE_MAX) // Max Sheet cnt
+        if (++sheetID == SURFACE_COUNT) // Max Sheet cnt
             return 0;
     }
     byte fileExtension = (byte)sheetPath[(StrLength(sheetPath) - 1) & 0xFF];
@@ -231,17 +231,12 @@ int AddGraphicsFile(const char *filePath)
         case 'x': LoadGFXFile(sheetPath, sheetID); break; // Not in lite/sf ver
     }
 
-#if RETRO_USING_C2D
-    //printf("Adding sprite sheet: %d\n", sheetID);
-    _3ds_cacheSpriteSurface(sheetID);
-#endif
-
     return sheetID;
 }
 void RemoveGraphicsFile(const char *filePath, int sheetID)
 {
     if (sheetID < 0) {
-        for (int i = 0; i < SURFACE_MAX; ++i) {
+        for (int i = 0; i < SURFACE_COUNT; ++i) {
             if (StrLength(gfxSurface[i].fileName) > 0 && StrComp(gfxSurface[i].fileName, filePath))
                 sheetID = i;
         }
@@ -253,16 +248,11 @@ void RemoveGraphicsFile(const char *filePath, int sheetID)
         int dataPosEnd   = gfxSurface[sheetID].dataPosition + gfxSurface[sheetID].height * gfxSurface[sheetID].width;
         for (int i = 0x200000 - dataPosEnd; i > 0; --i) graphicData[dataPosStart++] = graphicData[dataPosEnd++];
         gfxDataPosition -= gfxSurface[sheetID].height * gfxSurface[sheetID].width;
-        for (int i = 0; i < SURFACE_MAX; ++i) {
+        for (int i = 0; i < SURFACE_COUNT; ++i) {
             if (gfxSurface[i].dataPosition > gfxSurface[sheetID].dataPosition)
                 gfxSurface[i].dataPosition -= gfxSurface[sheetID].height * gfxSurface[sheetID].width;
         }
     }
-
-#if RETRO_USING_C2D
-    //printf("Deleting sprite sheet: %d\n", sheetID);
-    _3ds_delSpriteSurface(sheetID);
-#endif
 }
 
 int LoadBMPFile(const char *filePath, byte sheetID)
@@ -305,18 +295,18 @@ int LoadBMPFile(const char *filePath, byte sheetID)
         }
         gfxDataPosition += surface->height * surface->width;
 
-#if RETRO_SOFTWARE_RENDER
-        surface->widthShift = 0;
-        int w               = surface->width;
-        while (w > 1) {
-            w >>= 1;
-            ++surface->widthShift;
+        if (renderType == RENDER_SW) {
+            surface->widthShifted = 0;
+            int w                 = surface->width;
+            while (w > 1) {
+                w >>= 1;
+                ++surface->widthShifted;
+            }
         }
-#endif
 
-        if (gfxDataPosition >= GFXDATA_MAX) {
+        if (gfxDataPosition >= GFXDATA_SIZE) {
             gfxDataPosition = 0;
-            printLog("WARNING: Exceeded max gfx size!");
+            PrintLog("WARNING: Exceeded max gfx size!");
         }
 
         CloseFile();
@@ -345,8 +335,8 @@ int LoadGIFFile(const char *filePath, byte sheetID)
         surface->height += (fileBuffer << 8);
 
         FileRead(&fileBuffer, 1); // Palette Size
-        //int has_pallete = (fileBuffer & 0x80) >> 7;
-        //int colors = ((fileBuffer & 0x70) >> 4) + 1;
+        // int has_pallete = (fileBuffer & 0x80) >> 7;
+        // int colors = ((fileBuffer & 0x70) >> 4) + 1;
         int palette_size = (fileBuffer & 0x7) + 1;
         if (palette_size > 0)
             palette_size = 1 << palette_size;
@@ -379,22 +369,22 @@ int LoadGIFFile(const char *filePath, byte sheetID)
         }
 
         surface->dataPosition = gfxDataPosition;
-#if RETRO_SOFTWARE_RENDER
-        surface->widthShift = 0;
-        int w                 = surface->width;
-        while (w > 1) {
-            w >>= 1;
-            ++surface->widthShift;
+        if (renderType == RENDER_SW) {
+            surface->widthShifted = 0;
+            int w                 = surface->width;
+            while (w > 1) {
+                w >>= 1;
+                ++surface->widthShifted;
+            }
         }
-#endif
 
         gfxDataPosition += surface->width * surface->height;
-        if (gfxDataPosition < GFXDATA_MAX) {
+        if (gfxDataPosition < GFXDATA_SIZE) {
             ReadGifPictureData(surface->width, surface->height, interlaced, graphicData, surface->dataPosition);
         }
         else {
             gfxDataPosition = 0;
-            printLog("WARNING: Exceeded max gfx surface size!");
+            PrintLog("WARNING: Exceeded max gfx surface size!");
         }
 
         CloseFile();
@@ -443,18 +433,18 @@ int LoadGFXFile(const char *filePath, byte sheetID)
         }
 
         gfxDataPosition += surface->height * surface->width;
-#if RETRO_SOFTWARE_RENDER
-        surface->widthShift = 0;
-        int w               = surface->width;
-        while (w > 1) {
-            w >>= 1;
-            ++surface->widthShift;
+        if (renderType == RENDER_SW) {
+            surface->widthShifted = 0;
+            int w                 = surface->width;
+            while (w > 1) {
+                w >>= 1;
+                ++surface->widthShifted;
+            }
         }
-#endif
 
-        if (gfxDataPosition >= GFXDATA_MAX) {
+        if (gfxDataPosition >= GFXDATA_SIZE) {
             gfxDataPosition = 0;
-            printLog("WARNING: Exceeded max gfx size!");
+            PrintLog("WARNING: Exceeded max gfx size!");
         }
 
         CloseFile();
@@ -469,7 +459,7 @@ int LoadRSVFile(const char *filePath, byte sheetID)
         GFXSurface *surface = &gfxSurface[sheetID];
         StrCopy(surface->fileName, filePath);
 
-        videoData         = sheetID;
+        videoSurface      = sheetID;
         currentVideoFrame = 0;
 
         byte fileBuffer = 0;
@@ -489,16 +479,16 @@ int LoadRSVFile(const char *filePath, byte sheetID)
         FileRead(&fileBuffer, 1);
         videoHeight += fileBuffer << 8;
 
-        videoFilePos   = (int)GetFilePosition();
-        videoPlaying          = true;
+        videoFilePos          = (int)GetFilePosition();
+        videoPlaying          = 2; // playing rsv
         surface->width        = videoWidth;
         surface->height       = videoHeight;
         surface->dataPosition = gfxDataPosition;
         gfxDataPosition += surface->width * surface->height;
 
-        if (gfxDataPosition >= GFXDATA_MAX) {
+        if (gfxDataPosition >= GFXDATA_SIZE) {
             gfxDataPosition = 0;
-            printLog("WARNING: Exceeded max gfx size!");
+            PrintLog("WARNING: Exceeded max gfx size!");
         }
 
         return true;
@@ -530,14 +520,14 @@ int LoadPVRFile(const char *filePath, byte sheetID)
         surface->dataPosition = gfxDataPosition;
         gfxDataPosition += surface->width * surface->height;
 
-#if RETRO_SOFTWARE_RENDER
-        surface->widthShift = 0;
-        int w               = surface->width;
-        while (w > 1) {
-            w >>= 1;
-            ++surface->widthShift;
+        if (renderType == RENDER_SW) {
+            surface->widthShifted = 0;
+            int w                 = surface->width;
+            while (w > 1) {
+                w >>= 1;
+                ++surface->widthShifted;
+            }
         }
-#endif
 
         return false; // yeah I have no clue how to handle this, cd lite has this be loaded every frame on framebuffer update and does it that way
 
