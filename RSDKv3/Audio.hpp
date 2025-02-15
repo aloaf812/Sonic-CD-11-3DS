@@ -1,7 +1,9 @@
 #ifndef AUDIO_H
 #define AUDIO_H
 
+#if RETRO_PLATFORM != RETRO_3DS
 #include <stdlib.h>
+#endif
 
 #include <vorbis/vorbisfile.h>
 
