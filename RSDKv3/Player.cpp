@@ -1,8 +1,8 @@
 #include "RetroEngine.hpp"
 
 Player playerList[PLAYER_COUNT];
-int playerListPos = 0;
-int activePlayer  = 0;
+int playerListPos     = 0;
+int activePlayer      = 0;
 int activePlayerCount = 1;
 
 ushort upBuffer        = 0;
@@ -12,54 +12,59 @@ ushort rightBuffer     = 0;
 ushort jumpPressBuffer = 0;
 ushort jumpHoldBuffer  = 0;
 
-void ProcessPlayerControl(Player *Player)
+void ProcessPlayerControl(Player *player)
 {
-    if (Player->controlMode == -1) {
-        upBuffer <<= 1;
-        upBuffer |= (byte)Player->up;
-        downBuffer <<= 1;
-        downBuffer |= (byte)Player->down;
-        leftBuffer <<= 1;
-        leftBuffer |= (byte)Player->left;
-        rightBuffer <<= 1;
-        rightBuffer |= (byte)Player->right;
-        jumpPressBuffer <<= 1;
-        jumpPressBuffer |= (byte)Player->jumpPress;
-        jumpHoldBuffer <<= 1;
-        jumpHoldBuffer |= (byte)Player->jumpHold;
-    }
-    else if (Player->controlMode == 1) {
-        Player->up        = upBuffer >> 15;
-        Player->down      = downBuffer >> 15;
-        Player->left      = leftBuffer >> 15;
-        Player->right     = rightBuffer >> 15;
-        Player->jumpPress = jumpPressBuffer >> 15;
-        Player->jumpHold  = jumpHoldBuffer >> 15;
-    }
-    else {
-        Player->up   = keyDown.up;
-        Player->down = keyDown.down;
-        if (!keyDown.left || !keyDown.right) {
-            Player->left  = keyDown.left;
-            Player->right = keyDown.right;
-        }
-        else {
-            Player->left  = false;
-            Player->right = false;
-        }
-        Player->jumpHold  = keyDown.C | keyDown.B | keyDown.A;
-        Player->jumpPress = keyPress.C | keyPress.B | keyPress.A;
-        upBuffer <<= 1;
-        upBuffer |= (byte)Player->up;
-        downBuffer <<= 1;
-        downBuffer |= (byte)Player->down;
-        leftBuffer <<= 1;
-        leftBuffer |= (byte)Player->left;
-        rightBuffer <<= 1;
-        rightBuffer |= (byte)Player->right;
-        jumpPressBuffer <<= 1;
-        jumpPressBuffer |= (byte)Player->jumpPress;
-        jumpHoldBuffer <<= 1;
-        jumpHoldBuffer |= (byte)Player->jumpHold;
+    switch (player->controlMode) {
+        default:
+        case CONTROLMODE_NORMAL:
+            player->up   = keyDown.up;
+            player->down = keyDown.down;
+            if (!keyDown.left || !keyDown.right) {
+                player->left  = keyDown.left;
+                player->right = keyDown.right;
+            }
+            else {
+                player->left  = false;
+                player->right = false;
+            }
+            player->jumpHold  = keyDown.C | keyDown.B | keyDown.A;
+            player->jumpPress = keyPress.C | keyPress.B | keyPress.A;
+            upBuffer <<= 1;
+            upBuffer |= (byte)player->up;
+            downBuffer <<= 1;
+            downBuffer |= (byte)player->down;
+            leftBuffer <<= 1;
+            leftBuffer |= (byte)player->left;
+            rightBuffer <<= 1;
+            rightBuffer |= (byte)player->right;
+            jumpPressBuffer <<= 1;
+            jumpPressBuffer |= (byte)player->jumpPress;
+            jumpHoldBuffer <<= 1;
+            jumpHoldBuffer |= (byte)player->jumpHold;
+            break;
+
+        case CONTROLMODE_NONE:
+            upBuffer <<= 1;
+            upBuffer |= (byte)player->up;
+            downBuffer <<= 1;
+            downBuffer |= (byte)player->down;
+            leftBuffer <<= 1;
+            leftBuffer |= (byte)player->left;
+            rightBuffer <<= 1;
+            rightBuffer |= (byte)player->right;
+            jumpPressBuffer <<= 1;
+            jumpPressBuffer |= (byte)player->jumpPress;
+            jumpHoldBuffer <<= 1;
+            jumpHoldBuffer |= (byte)player->jumpHold;
+            break;
+
+        case CONTROLMODE_SIDEKICK:
+            player->up        = upBuffer >> 15;
+            player->down      = downBuffer >> 15;
+            player->left      = leftBuffer >> 15;
+            player->right     = rightBuffer >> 15;
+            player->jumpPress = jumpPressBuffer >> 15;
+            player->jumpHold  = jumpHoldBuffer >> 15;
+            break;
     }
 }
