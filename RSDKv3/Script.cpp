@@ -2,32 +2,31 @@
 #include <cmath>
 
 ObjectScript objectScriptList[OBJECT_COUNT];
+ScriptPtr functionScriptList[FUNCTION_COUNT];
 
-ScriptFunction scriptFunctionList[FUNCTION_COUNT];
-int scriptFunctionCount = 0;
-
-int scriptCode[SCRIPTDATA_COUNT];
-int jumpTable[JUMPTABLE_COUNT];
+int scriptData[SCRIPTDATA_COUNT];
+int jumpTableData[JUMPTABLE_COUNT];
 int jumpTableStack[JUMPSTACK_COUNT];
 int functionStack[FUNCSTACK_COUNT];
 
 int scriptCodePos     = 0;
-int scriptCodeOffset  = 0;
 int jumpTablePos      = 0;
-int jumpTableOffset   = 0;
 int jumpTableStackPos = 0;
 int functionStackPos  = 0;
 
 ScriptEngine scriptEng = ScriptEngine();
 char scriptText[0x100];
 
+int scriptDataPos       = 0;
+int scriptDataOffset    = 0;
+int jumpTableDataPos    = 0;
+int jumpTableDataOffset = 0;
 
+#define ALIAS_COUNT       (0x80)
 #define COMMONALIAS_COUNT (0x20)
-#define ALIAS_COUNT       (COMMONALIAS_COUNT + 0x60)
 int aliasCount = 0;
 int lineID     = 0;
 
-#if RETRO_USE_COMPILER
 struct AliasInfo {
     AliasInfo()
     {
@@ -43,7 +42,6 @@ struct AliasInfo {
     char name[0x20];
     char value[0x20];
 };
-#endif
 
 struct FunctionInfo {
     FunctionInfo()
@@ -61,7 +59,6 @@ struct FunctionInfo {
     int opcodeSize;
 };
 
-#if RETRO_USE_COMPILER
 const char variableNames[][0x20] = {
     "TempValue0",
     "TempValue1",
@@ -291,199 +288,188 @@ const char variableNames[][0x20] = {
     "Engine.PlatformID",
     "Engine.TrialMode",
     "KeyPress.AnyStart",
-#if RETRO_USE_HAPTICS
     "Engine.HapticsEnabled",
-#endif
-};
-#endif
-
-const FunctionInfo functions[] = {
-    FunctionInfo("End", 0),
-    FunctionInfo("Equal", 2),
-    FunctionInfo("Add", 2),
-    FunctionInfo("Sub", 2),
-    FunctionInfo("Inc", 1),
-    FunctionInfo("Dec", 1),
-    FunctionInfo("Mul", 2),
-    FunctionInfo("Div", 2),
-    FunctionInfo("ShR", 2),
-    FunctionInfo("ShL", 2),
-    FunctionInfo("And", 2),
-    FunctionInfo("Or", 2),
-    FunctionInfo("Xor", 2),
-    FunctionInfo("Mod", 2),
-    FunctionInfo("FlipSign", 1),
-    FunctionInfo("CheckEqual", 2),
-    FunctionInfo("CheckGreater", 2),
-    FunctionInfo("CheckLower", 2),
-    FunctionInfo("CheckNotEqual", 2),
-    FunctionInfo("IfEqual", 3),
-    FunctionInfo("IfGreater", 3),
-    FunctionInfo("IfGreaterOrEqual", 3),
-    FunctionInfo("IfLower", 3),
-    FunctionInfo("IfLowerOrEqual", 3),
-    FunctionInfo("IfNotEqual", 3),
-    FunctionInfo("else", 0),
-    FunctionInfo("endif", 0),
-    FunctionInfo("WEqual", 3),
-    FunctionInfo("WGreater", 3),
-    FunctionInfo("WGreaterOrEqual", 3),
-    FunctionInfo("WLower", 3),
-    FunctionInfo("WLowerOrEqual", 3),
-    FunctionInfo("WNotEqual", 3),
-    FunctionInfo("loop", 0),
-    FunctionInfo("switch", 2),
-    FunctionInfo("break", 0),
-    FunctionInfo("endswitch", 0),
-    FunctionInfo("Rand", 2),
-    FunctionInfo("Sin", 2),
-    FunctionInfo("Cos", 2),
-    FunctionInfo("Sin256", 2),
-    FunctionInfo("Cos256", 2),
-    FunctionInfo("SinChange", 5),
-    FunctionInfo("CosChange", 5),
-    FunctionInfo("ATan2", 3),
-    FunctionInfo("Interpolate", 4),
-    FunctionInfo("InterpolateXY", 7),
-    FunctionInfo("LoadSpriteSheet", 1),
-    FunctionInfo("RemoveSpriteSheet", 1),
-    FunctionInfo("DrawSprite", 1),
-    FunctionInfo("DrawSpriteXY", 3),
-    FunctionInfo("DrawSpriteScreenXY", 3),
-    FunctionInfo("DrawTintRect", 4),
-    FunctionInfo("DrawNumbers", 7),
-    FunctionInfo("DrawActName", 7),
-    FunctionInfo("DrawMenu", 3),
-    FunctionInfo("SpriteFrame", 6),
-    FunctionInfo("EditFrame", 7),
-    FunctionInfo("LoadPalette", 5),
-    FunctionInfo("RotatePalette", 3),
-    FunctionInfo("SetScreenFade", 4),
-    FunctionInfo("SetActivePalette", 3),
-    FunctionInfo("SetPaletteFade", 7),
-    FunctionInfo("CopyPalette", 2),
-    FunctionInfo("ClearScreen", 1),
-    FunctionInfo("DrawSpriteFX", 4),
-    FunctionInfo("DrawSpriteScreenFX", 4),
-    FunctionInfo("LoadAnimation", 1),
-    FunctionInfo("SetupMenu", 4),
-    FunctionInfo("AddMenuEntry", 3),
-    FunctionInfo("EditMenuEntry", 4),
-    FunctionInfo("LoadStage", 0),
-    FunctionInfo("DrawRect", 8),
-    FunctionInfo("ResetObjectEntity", 5),
-    FunctionInfo("PlayerObjectCollision", 5),
-    FunctionInfo("CreateTempObject", 4),
-    FunctionInfo("BindPlayerToObject", 2),
-    FunctionInfo("PlayerTileCollision", 0),
-    FunctionInfo("ProcessPlayerControl", 0),
-    FunctionInfo("ProcessAnimation", 0),
-    FunctionInfo("DrawObjectAnimation", 0),
-    FunctionInfo("DrawPlayerAnimation", 0),
-    FunctionInfo("SetMusicTrack", 3),
-    FunctionInfo("PlayMusic", 1),
-    FunctionInfo("StopMusic", 0),
-    FunctionInfo("PlaySfx", 2),
-    FunctionInfo("StopSfx", 1),
-    FunctionInfo("SetSfxAttributes", 3),
-    FunctionInfo("ObjectTileCollision", 4),
-    FunctionInfo("ObjectTileGrip", 4),
-    FunctionInfo("LoadVideo", 1),
-    FunctionInfo("NextVideoFrame", 0),
-    FunctionInfo("PlayStageSfx", 2),
-    FunctionInfo("StopStageSfx", 1),
-    FunctionInfo("Not", 1),
-    FunctionInfo("Draw3DScene", 0),
-    FunctionInfo("SetIdentityMatrix", 1),
-    FunctionInfo("MatrixMultiply", 2),
-    FunctionInfo("MatrixTranslateXYZ", 4),
-    FunctionInfo("MatrixScaleXYZ", 4),
-    FunctionInfo("MatrixRotateX", 2),
-    FunctionInfo("MatrixRotateY", 2),
-    FunctionInfo("MatrixRotateZ", 2),
-    FunctionInfo("MatrixRotateXYZ", 4),
-    FunctionInfo("TransformVertices", 3),
-    FunctionInfo("CallFunction", 1),
-    FunctionInfo("EndFunction", 0),
-    FunctionInfo("SetLayerDeformation", 6),
-    FunctionInfo("CheckTouchRect", 4),
-    FunctionInfo("GetTileLayerEntry", 4),
-    FunctionInfo("SetTileLayerEntry", 4),
-    FunctionInfo("GetBit", 3),
-    FunctionInfo("SetBit", 3),
-    FunctionInfo("PauseMusic", 0),
-    FunctionInfo("ResumeMusic", 0),
-    FunctionInfo("ClearDrawList", 1),
-    FunctionInfo("AddDrawListEntityRef", 2),
-    FunctionInfo("GetDrawListEntityRef", 3),
-    FunctionInfo("SetDrawListEntityRef", 3),
-    FunctionInfo("Get16x16TileInfo", 4),
-    FunctionInfo("Copy16x16Tile", 2),
-    FunctionInfo("Set16x16TileInfo", 4),
-    FunctionInfo("GetAnimationByName", 2),
-    FunctionInfo("ReadSaveRAM", 0),
-    FunctionInfo("WriteSaveRAM", 0),
-    FunctionInfo("LoadTextFont", 1),
-    FunctionInfo("LoadTextFile", 3),
-    FunctionInfo("DrawText", 7),
-    FunctionInfo("GetTextInfo", 5),
-    FunctionInfo("GetVersionNumber", 2),
-    FunctionInfo("SetAchievement", 2),
-    FunctionInfo("SetLeaderboard", 2),
-    FunctionInfo("LoadOnlineMenu", 1),
-    FunctionInfo("EngineCallback", 1),
-#if RETRO_USE_HAPTICS
-    FunctionInfo("HapticEffect", 4),
-#endif
 };
 
-#if RETRO_USE_COMPILER
-AliasInfo aliases[ALIAS_COUNT] = { AliasInfo("true", "1"),
-                                   AliasInfo("false", "0"),
-                                   AliasInfo("FX_SCALE", "0"),
-                                   AliasInfo("FX_ROTATE", "1"),
-                                   AliasInfo("FX_ROTOZOOM", "2"),
-                                   AliasInfo("FX_INK", "3"),
-                                   AliasInfo("PRESENTATION_STAGE", "0"),
-                                   AliasInfo("REGULAR_STAGE", "1"),
-                                   AliasInfo("BONUS_STAGE", "2"),
-                                   AliasInfo("SPECIAL_STAGE", "3"),
-                                   AliasInfo("MENU_1", "0"),
-                                   AliasInfo("MENU_2", "1"),
-                                   AliasInfo("C_TOUCH", "0"),
-                                   AliasInfo("C_BOX", "1"),
-                                   AliasInfo("C_BOX2", "2"),
-                                   AliasInfo("C_PLATFORM", "3"),
-                                   AliasInfo("MAT_WORLD", "0"),
-                                   AliasInfo("MAT_VIEW", "1"),
-                                   AliasInfo("MAT_TEMP", "2"),
-                                   AliasInfo("FX_FLIP", "5"),
-                                   AliasInfo("FACING_LEFT", "1"),
-                                   AliasInfo("FACING_RIGHT", "0"),
-                                   AliasInfo("STAGE_PAUSED", "2"),
-                                   AliasInfo("STAGE_RUNNING", "1"),
-                                   AliasInfo("RESET_GAME", "2"),
-                                   AliasInfo("RETRO_WIN", "0"),
-                                   AliasInfo("RETRO_OSX", "1"),
-                                   AliasInfo("RETRO_XBOX_360", "2"),
-                                   AliasInfo("RETRO_PS3", "3"),
-                                   AliasInfo("RETRO_iOS", "4"),
-                                   AliasInfo("RETRO_ANDROID", "5"),
-                                   AliasInfo("RETRO_WP7", "6") };
+const FunctionInfo functions[] = { FunctionInfo("End", 0),
+                             FunctionInfo("Equal", 2),
+                             FunctionInfo("Add", 2),
+                             FunctionInfo("Sub", 2),
+                             FunctionInfo("Inc", 1),
+                             FunctionInfo("Dec", 1),
+                             FunctionInfo("Mul", 2),
+                             FunctionInfo("Div", 2),
+                             FunctionInfo("ShR", 2),
+                             FunctionInfo("ShL", 2),
+                             FunctionInfo("And", 2),
+                             FunctionInfo("Or", 2),
+                             FunctionInfo("Xor", 2),
+                             FunctionInfo("Mod", 2),
+                             FunctionInfo("FlipSign", 1),
+                             FunctionInfo("CheckEqual", 2),
+                             FunctionInfo("CheckGreater", 2),
+                             FunctionInfo("CheckLower", 2),
+                             FunctionInfo("CheckNotEqual", 2),
+                             FunctionInfo("IfEqual", 3),
+                             FunctionInfo("IfGreater", 3),
+                             FunctionInfo("IfGreaterOrEqual", 3),
+                             FunctionInfo("IfLower", 3),
+                             FunctionInfo("IfLowerOrEqual", 3),
+                             FunctionInfo("IfNotEqual", 3),
+                             FunctionInfo("else", 0),
+                             FunctionInfo("endif", 0),
+                             FunctionInfo("WEqual", 3),
+                             FunctionInfo("WGreater", 3),
+                             FunctionInfo("WGreaterOrEqual", 3),
+                             FunctionInfo("WLower", 3),
+                             FunctionInfo("WLowerOrEqual", 3),
+                             FunctionInfo("WNotEqual", 3),
+                             FunctionInfo("loop", 0),
+                             FunctionInfo("switch", 2),
+                             FunctionInfo("break", 0),
+                             FunctionInfo("endswitch", 0),
+                             FunctionInfo("Rand", 2),
+                             FunctionInfo("Sin", 2),
+                             FunctionInfo("Cos", 2),
+                             FunctionInfo("Sin256", 2),
+                             FunctionInfo("Cos256", 2),
+                             FunctionInfo("SinChange", 5),
+                             FunctionInfo("CosChange", 5),
+                             FunctionInfo("ATan2", 3),
+                             FunctionInfo("Interpolate", 4),
+                             FunctionInfo("InterpolateXY", 7),
+                             FunctionInfo("LoadSpriteSheet", 1),
+                             FunctionInfo("RemoveSpriteSheet", 1),
+                             FunctionInfo("DrawSprite", 1),
+                             FunctionInfo("DrawSpriteXY", 3),
+                             FunctionInfo("DrawSpriteScreenXY", 3),
+                             FunctionInfo("DrawTintRect", 4),
+                             FunctionInfo("DrawNumbers", 7),
+                             FunctionInfo("DrawActName", 7),
+                             FunctionInfo("DrawMenu", 3),
+                             FunctionInfo("SpriteFrame", 6),
+                             FunctionInfo("EditFrame", 7),
+                             FunctionInfo("LoadPalette", 5),
+                             FunctionInfo("RotatePalette", 3),
+                             FunctionInfo("SetScreenFade", 4),
+                             FunctionInfo("SetActivePalette", 3),
+                             FunctionInfo("SetPaletteFade", 7),
+                             FunctionInfo("CopyPalette", 2),
+                             FunctionInfo("ClearScreen", 1),
+                             FunctionInfo("DrawSpriteFX", 4),
+                             FunctionInfo("DrawSpriteScreenFX", 4),
+                             FunctionInfo("LoadAnimation", 1),
+                             FunctionInfo("SetupMenu", 4),
+                             FunctionInfo("AddMenuEntry", 3),
+                             FunctionInfo("EditMenuEntry", 4),
+                             FunctionInfo("LoadStage", 0),
+                             FunctionInfo("DrawRect", 8),
+                             FunctionInfo("ResetObjectEntity", 5),
+                             FunctionInfo("PlayerObjectCollision", 5),
+                             FunctionInfo("CreateTempObject", 4),
+                             FunctionInfo("BindPlayerToObject", 2),
+                             FunctionInfo("PlayerTileCollision", 0),
+                             FunctionInfo("ProcessPlayerControl", 0),
+                             FunctionInfo("ProcessAnimation", 0),
+                             FunctionInfo("DrawObjectAnimation", 0),
+                             FunctionInfo("DrawPlayerAnimation", 0),
+                             FunctionInfo("SetMusicTrack", 3),
+                             FunctionInfo("PlayMusic", 1),
+                             FunctionInfo("StopMusic", 0),
+                             FunctionInfo("PlaySfx", 2),
+                             FunctionInfo("StopSfx", 1),
+                             FunctionInfo("SetSfxAttributes", 3),
+                             FunctionInfo("ObjectTileCollision", 4),
+                             FunctionInfo("ObjectTileGrip", 4),
+                             FunctionInfo("LoadVideo", 1),
+                             FunctionInfo("NextVideoFrame", 0),
+                             FunctionInfo("PlayStageSfx", 2),
+                             FunctionInfo("StopStageSfx", 1),
+                             FunctionInfo("Not", 1),
+                             FunctionInfo("Draw3DScene", 0),
+                             FunctionInfo("SetIdentityMatrix", 1),
+                             FunctionInfo("MatrixMultiply", 2),
+                             FunctionInfo("MatrixTranslateXYZ", 4),
+                             FunctionInfo("MatrixScaleXYZ", 4),
+                             FunctionInfo("MatrixRotateX", 2),
+                             FunctionInfo("MatrixRotateY", 2),
+                             FunctionInfo("MatrixRotateZ", 2),
+                             FunctionInfo("MatrixRotateXYZ", 4),
+                             FunctionInfo("TransformVertices", 3),
+                             FunctionInfo("CallFunction", 1),
+                             FunctionInfo("EndFunction", 0),
+                             FunctionInfo("SetLayerDeformation", 6),
+                             FunctionInfo("CheckTouchRect", 4),
+                             FunctionInfo("GetTileLayerEntry", 4),
+                             FunctionInfo("SetTileLayerEntry", 4),
+                             FunctionInfo("GetBit", 3),
+                             FunctionInfo("SetBit", 3),
+                             FunctionInfo("PauseMusic", 0),
+                             FunctionInfo("ResumeMusic", 0),
+                             FunctionInfo("ClearDrawList", 1),
+                             FunctionInfo("AddDrawListEntityRef", 2),
+                             FunctionInfo("GetDrawListEntityRef", 3),
+                             FunctionInfo("SetDrawListEntityRef", 3),
+                             FunctionInfo("Get16x16TileInfo", 4),
+                             FunctionInfo("Copy16x16Tile", 2),
+                             FunctionInfo("Set16x16TileInfo", 4),
+                             FunctionInfo("GetAnimationByName", 2),
+                             FunctionInfo("ReadSaveRAM", 0),
+                             FunctionInfo("WriteSaveRAM", 0),
+                             FunctionInfo("LoadTextFont", 1),
+                             FunctionInfo("LoadTextFile", 3),
+                             FunctionInfo("DrawText", 7),
+                             FunctionInfo("GetTextInfo", 5),
+                             FunctionInfo("GetVersionNumber", 2),
+                             FunctionInfo("SetAchievement", 2),
+                             FunctionInfo("SetLeaderboard", 2),
+                             FunctionInfo("LoadOnlineMenu", 1),
+                             FunctionInfo("EngineCallback", 1),
+                             FunctionInfo("HapticEffect", 4) };
 
-const char scriptEvaluationTokens[][0x4] = { "=",  "+=", "-=", "++", "--", "*=", "/=", ">>=", "<<=", "&=",
-                                             "|=", "^=", "%=", "==", ">",  ">=", "<",  "<=",  "!=" };
+AliasInfo aliases[0x80] = { AliasInfo("true", "1"),
+                            AliasInfo("false", "0"),
+                            AliasInfo("FX_SCALE", "0"),
+                            AliasInfo("FX_ROTATE", "1"),
+                            AliasInfo("FX_ROTOZOOM", "2"),
+                            AliasInfo("FX_INK", "3"),
+                            AliasInfo("PRESENTATION_STAGE", "0"),
+                            AliasInfo("REGULAR_STAGE", "1"),
+                            AliasInfo("BONUS_STAGE", "2"),
+                            AliasInfo("SPECIAL_STAGE", "3"),
+                            AliasInfo("MENU_1", "0"),
+                            AliasInfo("MENU_2", "1"),
+                            AliasInfo("C_TOUCH", "0"),
+                            AliasInfo("C_BOX", "1"),
+                            AliasInfo("C_BOX2", "2"),
+                            AliasInfo("C_PLATFORM", "3"),
+                            AliasInfo("MAT_WORLD", "0"),
+                            AliasInfo("MAT_VIEW", "1"),
+                            AliasInfo("MAT_TEMP", "2"),
+                            AliasInfo("FX_FLIP", "5"),
+                            AliasInfo("FACING_LEFT", "1"),
+                            AliasInfo("FACING_RIGHT", "0"),
+                            AliasInfo("STAGE_PAUSED", "2"),
+                            AliasInfo("STAGE_RUNNING", "1"),
+                            AliasInfo("RESET_GAME", "2"),
+                            AliasInfo("RETRO_WIN", "0"),
+                            AliasInfo("RETRO_OSX", "1"),
+                            AliasInfo("RETRO_XBOX_360", "2"),
+                            AliasInfo("RETRO_PS3", "3"),
+                            AliasInfo("RETRO_iOS", "4"),
+                            AliasInfo("RETRO_ANDROID", "5"),
+                            AliasInfo("RETRO_WP7", "6") };
 
+
+const char scriptEvaluationTokens[][0x4] = {
+    "=", "+=", "-=", "++", "--", "*=", "/=", ">>=", "<<=", "&=", "|=", "^=", "%=", "==", ">", ">=", "<", "<=", "!="
+};
+
+int scriptFunctionCount = 0;
+char scriptFunctionNames[FUNCTION_COUNT][0x20];
 
 enum ScriptReadModes { READMODE_NORMAL = 0, READMODE_STRING = 1, READMODE_COMMENTLINE = 2, READMODE_ENDLINE = 3, READMODE_EOF = 4 };
-enum ScriptParseModes {
-    PARSEMODE_SCOPELESS    = 0,
-    PARSEMODE_PLATFORMSKIP = 1,
-    PARSEMODE_FUNCTION     = 2,
-    PARSEMODE_SWITCHREAD   = 3,
-    PARSEMODE_ERROR        = 0xFF
-};
-#endif
+enum ScriptParseModes { PARSEMODE_SCOPELESS = 0, PARSEMODE_PLATFORMSKIP = 1, PARSEMODE_FUNCTION = 2, PARSEMODE_SWITCHREAD = 3, PARSEMODE_ERROR = 0xFF };
 
 enum ScriptVarTypes { SCRIPTVAR_VAR = 1, SCRIPTVAR_INTCONST = 2, SCRIPTVAR_STRCONST = 3 };
 enum ScriptVarArrTypes { VARARR_NONE = 0, VARARR_ARRAY = 1, VARARR_ENTNOPLUS1 = 2, VARARR_ENTNOMINUS1 = 3 };
@@ -717,9 +703,7 @@ enum ScrVariable {
     VAR_ENGINEPLATFORMID,
     VAR_ENGINETRIALMODE,
     VAR_KEYPRESSANYSTART,
-#if RETRO_USE_HAPTICS
     VAR_ENGINEHAPTICSENABLED,
-#endif
     VAR_MAX_CNT
 };
 
@@ -858,57 +842,40 @@ enum ScrFunction {
     FUNC_SETLEADERBOARD,
     FUNC_LOADONLINEMENU,
     FUNC_ENGINECALLBACK,
-#if RETRO_USE_HAPTICS
     FUNC_HAPTICEFFECT,
-#endif
     FUNC_MAX_CNT
 };
 
-#if RETRO_USE_COMPILER
 void CheckAliasText(char *text)
 {
-    if (FindStringToken(text, "#alias", 1) != 0)
+    if (FindStringToken(text, "#alias", 1))
         return;
-
-#if !RETRO_USE_ORIGINAL_CODE
-    if (aliasCount >= ALIAS_COUNT) {
-        SetupTextMenu(&gameMenu[0], 0);
-        AddTextMenuEntry(&gameMenu[0], "SCRIPT PARSING FAILED");
-        AddTextMenuEntry(&gameMenu[0], " ");
-        AddTextMenuEntry(&gameMenu[0], "TOO MANY ALIASES");
-        Engine.gameMode = ENGINE_SCRIPTERROR;
-        return;
-    }
-#endif
-
     int textPos     = 6;
     int aliasStrPos = 0;
-    int parseMode  = 0;
-
-    while (parseMode < 2) {
-        if (parseMode) {
-            if (parseMode == 1) {
+    int aliasMatch  = 0;
+    while (aliasMatch < 2) {
+        if (aliasMatch) {
+            if (aliasMatch == 1) {
                 aliases[aliasCount].name[aliasStrPos] = text[textPos];
                 if (text[textPos]) {
                     aliasStrPos++;
                 }
                 else {
                     aliasStrPos = 0;
-                    ++parseMode;
+                    ++aliasMatch;
                 }
             }
         }
         else if (text[textPos] == ':') {
-            aliases[aliasCount].value[aliasStrPos] = 0;
-            aliasStrPos                            = 0;
-            parseMode                             = 1;
+            aliases[aliasCount].value[aliasStrPos]        = 0;
+            aliasStrPos                             = 0;
+            aliasMatch                              = 1;
         }
         else {
             aliases[aliasCount].value[aliasStrPos++] = text[textPos];
         }
         ++textPos;
     }
-
     ++aliasCount;
 }
 void ConvertArithmaticSyntax(char *text)
@@ -925,7 +892,6 @@ void ConvertArithmaticSyntax(char *text)
             token  = i;
         }
     }
-
     if (token > 0) {
         StrCopy(dest, functions[token].name);
         StrAdd(dest, "(");
@@ -949,69 +915,60 @@ void ConvertIfWhileStatement(char *text)
     int compareOp  = -1;
     int strPos     = 0;
     int destStrPos = 0;
-
-    if (FindStringToken(text, "if", 1) == 0) {
+    if (FindStringToken(text, "if", 1)) {
+        if (!FindStringToken(text, "while", 1)) { //if no "if" but there is "while"
+            for (int i = 0; i < 6; ++i) {
+                destStrPos = FindStringToken(text, scriptEvaluationTokens[i + FUNC_MOD], 1);
+                if (destStrPos > -1) {
+                    strPos = destStrPos;
+                    compareOp = i;
+                }
+            }
+            if (compareOp > -1) {
+                text[strPos] = ',';
+                StrCopy(dest, functions[compareOp + FUNC_WEQUAL].name);
+                StrAdd(dest, "(");
+                AppendIntegerToString(dest, jumpTableDataPos - jumpTableDataOffset);
+                StrAdd(dest, ",");
+                destStrPos = StrLength(dest);
+                for (int i = 5; text[i]; ++i) {
+                    if (text[i] != '=' && text[i] != '(' && text[i] != ')')
+                        dest[destStrPos++] = text[i];
+                }
+                dest[destStrPos] = 0;
+                StrAdd(dest, ")");
+                StrCopy(text, dest);
+                jumpTableStack[++jumpTableStackPos] = jumpTableDataPos;
+                jumpTableData[jumpTableDataPos++]   = scriptDataPos - scriptDataOffset;
+                jumpTableData[jumpTableDataPos++]   = 0;
+            }
+        }
+    }
+    else {
         for (int i = 0; i < 6; ++i) {
             destStrPos = FindStringToken(text, scriptEvaluationTokens[i + FUNC_MOD], 1);
             if (destStrPos > -1) {
-                strPos    = destStrPos;
+                strPos = destStrPos;
                 compareOp = i;
             }
         }
-
         if (compareOp > -1) {
             text[strPos] = ',';
-
             StrCopy(dest, functions[compareOp + FUNC_IFEQUAL].name);
             StrAdd(dest, "(");
-            AppendIntegerToString(dest, jumpTablePos - jumpTableOffset);
+            AppendIntegerToString(dest, jumpTableDataPos - jumpTableDataOffset);
             StrAdd(dest, ",");
-
             destStrPos = StrLength(dest);
             for (int i = 2; text[i]; ++i) {
                 if (text[i] != '=' && text[i] != '(' && text[i] != ')')
                     dest[destStrPos++] = text[i];
             }
             dest[destStrPos] = 0;
-
             StrAdd(dest, ")");
             StrCopy(text, dest);
-
-            jumpTableStack[++jumpTableStackPos] = jumpTablePos;
-            jumpTable[jumpTablePos++]       = -1;
-            jumpTable[jumpTablePos++]       = 0;
-        }
-    }
-    else if (FindStringToken(text, "while", 1) == 0) {
-        for (int i = 0; i < 6; ++i) {
-            destStrPos = FindStringToken(text, scriptEvaluationTokens[i + FUNC_MOD], 1);
-            if (destStrPos > -1) {
-                strPos    = destStrPos;
-                compareOp = i;
-            }
-        }
-
-        if (compareOp > -1) {
-            text[strPos] = ',';
-
-            StrCopy(dest, functions[compareOp + FUNC_WEQUAL].name);
-            StrAdd(dest, "(");
-            AppendIntegerToString(dest, jumpTablePos - jumpTableOffset);
-            StrAdd(dest, ",");
-
-            destStrPos = StrLength(dest);
-            for (int i = 5; text[i]; ++i) {
-                if (text[i] != '=' && text[i] != '(' && text[i] != ')')
-                    dest[destStrPos++] = text[i];
-            }
-            dest[destStrPos] = 0;
-
-            StrAdd(dest, ")");
-            StrCopy(text, dest);
-
-            jumpTableStack[++jumpTableStackPos] = jumpTablePos;
-            jumpTable[jumpTablePos++]       = scriptCodePos - scriptCodeOffset;
-            jumpTable[jumpTablePos++]       = 0;
+            jumpTableStack[++jumpTableStackPos] = jumpTableDataPos;
+            jumpTableData[jumpTableDataPos++]   = -1;
+            jumpTableData[jumpTableDataPos++]   = 0;
         }
     }
 }
@@ -1019,11 +976,10 @@ bool ConvertSwitchStatement(char *text)
 {
     if (FindStringToken(text, "switch", 1))
         return false;
-
     char switchText[260];
     StrCopy(switchText, "switch");
     StrAdd(switchText, "(");
-    AppendIntegerToString(switchText, jumpTablePos - jumpTableOffset);
+    AppendIntegerToString(switchText, jumpTableDataPos - jumpTableDataOffset);
     StrAdd(switchText, ",");
     int pos = StrLength(switchText);
     for (int i = 6; text[i]; ++i) {
@@ -1033,18 +989,16 @@ bool ConvertSwitchStatement(char *text)
     switchText[pos] = 0;
     StrAdd(switchText, ")");
     StrCopy(text, switchText);
-
-    jumpTableStack[++jumpTableStackPos] = jumpTablePos;
-    jumpTable[jumpTablePos++]   = 0x10000;
-    jumpTable[jumpTablePos++]   = -0x10000;
-    jumpTable[jumpTablePos++]   = -1;
-    jumpTable[jumpTablePos++]   = 0;
-
+    jumpTableStack[++jumpTableStackPos] = jumpTableDataPos;
+    jumpTableData[jumpTableDataPos++]   = 0x10000;
+    jumpTableData[jumpTableDataPos++]   = -0x10000;
+    jumpTableData[jumpTableDataPos++]   = -1;
+    jumpTableData[jumpTableDataPos++]   = 0;
     return true;
 }
 void ConvertFunctionText(char *text)
 {
-    char arrayStr[128];
+    char strBuffer[128];
     char funcName[132];
     int opcode     = 0;
     int opcodeSize = 0;
@@ -1060,262 +1014,136 @@ void ConvertFunctionText(char *text)
             i          = FUNC_MAX_CNT;
         }
     }
-
     if (opcode <= 0) {
         SetupTextMenu(&gameMenu[0], 0);
         AddTextMenuEntry(&gameMenu[0], "SCRIPT PARSING FAILED");
         AddTextMenuEntry(&gameMenu[0], " ");
         AddTextMenuEntry(&gameMenu[0], "OPCODE NOT FOUND");
         AddTextMenuEntry(&gameMenu[0], funcName);
-#if !RETRO_USE_ORIGINAL_CODE
-        AddTextMenuEntry(&gameMenu[0], " ");
-        AddTextMenuEntry(&gameMenu[0], "LINE NUMBER");
-        char buffer[0x10];
-        buffer[0] = 0;
-        AppendIntegerToString(buffer, lineID);
-        AddTextMenuEntry(&gameMenu[0], buffer);
-#endif
         Engine.gameMode = ENGINE_SCRIPTERROR;
     }
     else {
-        scriptCode[scriptCodePos++] = opcode;
+        scriptData[scriptDataPos++] = opcode;
         if (StrComp("else", functions[opcode].name))
-            jumpTable[jumpTableStack[jumpTableStackPos]] = scriptCodePos - scriptCodeOffset;
+            jumpTableData[jumpTableStack[jumpTableStackPos]] = scriptDataPos - scriptDataOffset;
 
         if (StrComp("endif", functions[opcode].name) == 1) {
             int jPos                = jumpTableStack[jumpTableStackPos];
-            jumpTable[jPos + 1] = scriptCodePos - scriptCodeOffset;
-            if (jumpTable[jPos] == -1)
-                jumpTable[jPos] = (scriptCodePos - scriptCodeOffset) - 1;
+            jumpTableData[jPos + 1] = scriptDataPos - scriptDataOffset;
+            if (jumpTableData[jPos] == -1)
+                jumpTableData[jPos] = (scriptDataPos - scriptDataOffset) - 1;
             --jumpTableStackPos;
         }
 
         if (StrComp("endswitch", functions[opcode].name)) {
             int jPos                = jumpTableStack[jumpTableStackPos];
-            jumpTable[jPos + 3] = scriptCodePos - scriptCodeOffset;
-            if (jumpTable[jPos + 2] == -1) {
-                jumpTable[jPos + 2] = (scriptCodePos - scriptCodeOffset) - 1;
-                int caseCnt             = abs(jumpTable[jPos + 1] - jumpTable[jPos]) + 1;
+            jumpTableData[jPos + 3] = scriptDataPos - scriptDataOffset;
+            if (jumpTableData[jPos + 2] == -1) {
+                jumpTableData[jPos + 2] = (scriptDataPos - scriptDataOffset) - 1;
+                int caseCnt                = abs(jumpTableData[jPos + 1] - jumpTableData[jPos]) + 1;
 
                 int jOffset = jPos + 4;
                 for (int c = 0; c < caseCnt; ++c) {
-                    if (jumpTable[jOffset + c] < 0)
-                        jumpTable[jOffset + c] = jumpTable[jPos + 2];
+                    if (jumpTableData[jOffset + c] < 0)
+                        jumpTableData[jOffset + c] = jumpTableData[jPos + 2];
                 }
             }
             --jumpTableStackPos;
         }
 
         if (StrComp("loop", functions[opcode].name)) {
-            jumpTable[jumpTableStack[jumpTableStackPos--] + 1] = scriptCodePos - scriptCodeOffset;
+            jumpTableData[jumpTableStack[jumpTableStackPos--] + 1] = scriptDataPos - scriptDataOffset;
         }
 
         for (int i = 0; i < opcodeSize; ++i) {
             ++textPos;
-            int varNamePos  = 0;
-            int parseMode   = 0;
-            int arrayStrPos = 0;
-
+            int funcNamePos      = 0;
+            int value            = 0;
+            int scriptTextByteID = 0;
             while (text[textPos] != ',' && text[textPos] != ')' && text[textPos]) {
-                if (parseMode) {
+                if (value) {
                     if (text[textPos] == ']')
-                        parseMode = 0;
+                        value = 0;
                     else
-                        arrayStr[arrayStrPos++] = text[textPos];
+                        strBuffer[scriptTextByteID++] = text[textPos];
                     ++textPos;
                 }
                 else {
                     if (text[textPos] == '[')
-                        parseMode = 1;
+                        value = 1;
                     else
-                        funcName[varNamePos++] = text[textPos];
+                        funcName[funcNamePos++] = text[textPos];
                     ++textPos;
                 }
             }
-            funcName[varNamePos]   = 0;
-            arrayStr[arrayStrPos] = 0;
-
+            funcName[funcNamePos]       = 0;
+            strBuffer[scriptTextByteID] = 0;
             // Eg: TempValue0 = FX_SCALE
             for (int a = 0; a < aliasCount; ++a) {
                 if (StrComp(funcName, aliases[a].name)) {
                     CopyAliasStr(funcName, aliases[a].value, 0);
                     if (FindStringToken(aliases[a].value, "[", 1) > -1)
-                        CopyAliasStr(arrayStr, aliases[a].value, 1);
+                        CopyAliasStr(strBuffer, aliases[a].value, 1);
                 }
             }
-
             // Eg: TempValue0 = Game.Variable
             for (int v = 0; v < globalVariablesCount; ++v) {
                 if (StrComp(funcName, globalVariableNames[v])) {
                     StrCopy(funcName, "Global");
-                    arrayStr[0] = 0;
-                    AppendIntegerToString(arrayStr, v);
+                    strBuffer[0] = 0;
+                    AppendIntegerToString(strBuffer, v);
                 }
             }
-
             // Eg: TempValue0 = Function1
             for (int f = 0; f < scriptFunctionCount; ++f) {
-                if (StrComp(funcName, scriptFunctionList[f].name)) {
+                if (StrComp(funcName, scriptFunctionNames[f])) {
                     funcName[0] = 0;
                     AppendIntegerToString(funcName, f);
                 }
             }
-
             // Eg: TempValue0 = TypeName[PlayerObject]
             if (StrComp(funcName, "TypeName")) {
-                funcName[0]  = '0';
-                funcName[1] = 0;
-
+                funcName[0] = 0;
+                AppendIntegerToString(funcName, 0);
                 for (int o = 0; o < OBJECT_COUNT; ++o) {
-                    if (StrComp(arrayStr, typeNames[o])) {
+                    if (StrComp(strBuffer, typeNames[o])) {
                         funcName[0] = 0;
                         AppendIntegerToString(funcName, o);
                     }
                 }
             }
-
-#if RETRO_USE_MOD_LOADER
-            // Eg: TempValue0 = SfxName[Jump]
-            if (StrComp(funcName, "SfxName")) {
-                funcName[0] = '0';
-                funcName[1] = 0;
-
-                int s = 0;
-                for (; s < globalSFXCount; ++s) {
-                    if (StrComp(arrayStr, globalSfxNames[s])) {
-                        funcName[0] = 0;
-                        AppendIntegerToString(funcName, s);
-                        break;
-                    }
-                }
-
-                if (s == globalSFXCount) {
-                    s = 0;
-                    for (; s < stageSFXCount; ++s) {
-                        if (StrComp(arrayStr, stageSfxNames[s])) {
-                            funcName[0] = 0;
-                            AppendIntegerToString(funcName, s);
-                            break;
-                        }
-                    }
-
-                    if (s == stageSFXCount) {
-                        char buf[0x40];
-                        sprintf(buf, "WARNING: Unknown SfxName \"%s\"", arrayStr);
-                        PrintLog(buf);
-                    }
-                }
-            }
-
-            // Eg: TempValue0 = AchievementName[88 Miles Per Hour]
-            if (StrComp(funcName, "AchievementName")) {
-                funcName[0] = '0';
-                funcName[1] = 0;
-
-                int a = 0;
-                for (; a < ACHIEVEMENT_COUNT; ++a) {
-                    if (StrComp(arrayStr, achievements[a].name)) {
-                        funcName[0] = 0;
-                        AppendIntegerToString(funcName, a);
-                        break;
-                    }
-                }
-
-                if (a == ACHIEVEMENT_COUNT) {
-                    char buf[0x40];
-                    sprintf(buf, "WARNING: Unknown AchievementName \"%s\"", arrayStr);
-                    PrintLog(buf);
-                }
-            }
-
-            // Eg: TempValue0 = PlayerName[SONIC]
-            if (StrComp(funcName, "PlayerName")) {
-                funcName[0] = '0';
-                funcName[1] = 0;
-
-                int p = 0;
-                for (; p < PLAYERNAME_COUNT; ++p) {
-                    if (StrComp(arrayStr, playerNames[p])) {
-                        funcName[0] = 0;
-                        AppendIntegerToString(funcName, p);
-                        break;
-                    }
-                }
-
-                if (p == PLAYERNAME_COUNT) {
-                    char buf[0x40];
-                    sprintf(buf, "WARNING: Unknown PlayerName \"%s\"", arrayStr);
-                    PrintLog(buf);
-                }
-            }
-
-            // Eg: TempValue0 = StageName[R - PALMTREE PANIC ZONE 1 A]
-            if (StrComp(funcName, "StageName")) {
-                funcName[0] = '0';
-                funcName[1] = 0;
-
-                int s       = -1;
-                if (StrLength(arrayStr) >= 2) {
-                    char list = arrayStr[0];
-                    switch (list) {
-                        case 'P': list = STAGELIST_PRESENTATION; break;
-                        case 'R': list = STAGELIST_REGULAR; break;
-                        case 'S': list = STAGELIST_SPECIAL; break;
-                        case 'B': list = STAGELIST_BONUS; break;
-                    }
-                    s = GetSceneID(list, &arrayStr[2]);
-                }
-
-                if (s == -1) {
-                    char buf[0x40];
-                    sprintf(buf, "WARNING: Unknown StageName \"%s\", on line %d", arrayStr, lineID);
-                    PrintLog(buf);
-                    s = 0;
-                }
-                funcName[0] = 0;
-                AppendIntegerToString(funcName, s);
-            }
-#endif
-
-            int constant = 0;
-            if (ConvertStringToInteger(funcName, &constant)) {
-                scriptCode[scriptCodePos++] = SCRIPTVAR_INTCONST;
-                scriptCode[scriptCodePos++] = constant;
+            if (ConvertStringToInteger(funcName, &value)) {
+                scriptData[scriptDataPos++] = SCRIPTVAR_INTCONST;
+                scriptData[scriptDataPos++] = value;
             }
             else if (funcName[0] == '"') {
-                scriptCode[scriptCodePos++] = SCRIPTVAR_STRCONST;
-                scriptCode[scriptCodePos++] = StrLength(funcName) - 2;
-
-                int scriptTextPos = 1;
-                arrayStrPos       = 0;
+                scriptData[scriptDataPos++] = SCRIPTVAR_STRCONST;
+                scriptData[scriptDataPos++] = StrLength(funcName) - 2;
+                int scriptTextPos           = 1;
+                scriptTextByteID            = 0;
                 while (scriptTextPos > -1) {
-                    switch (arrayStrPos) {
+                    switch (scriptTextByteID) {
                         case 0:
-                            scriptCode[scriptCodePos] = funcName[scriptTextPos] << 24;
-                            ++arrayStrPos;
+                            scriptData[scriptDataPos] = funcName[scriptTextPos] << 24;
+                            ++scriptTextByteID;
                             break;
-
                         case 1:
-                            scriptCode[scriptCodePos] += funcName[scriptTextPos] << 16;
-                            ++arrayStrPos;
+                            scriptData[scriptDataPos] += funcName[scriptTextPos] << 16;
+                            ++scriptTextByteID;
                             break;
-
                         case 2:
-                            scriptCode[scriptCodePos] += funcName[scriptTextPos] << 8;
-                            ++arrayStrPos;
+                            scriptData[scriptDataPos] += funcName[scriptTextPos] << 8;
+                            ++scriptTextByteID;
                             break;
-
                         case 3:
-                            scriptCode[scriptCodePos++] += funcName[scriptTextPos];
-                            arrayStrPos = 0;
+                            scriptData[scriptDataPos++] += funcName[scriptTextPos];
+                            scriptTextByteID = 0;
                             break;
-
                         default: break;
                     }
-
                     if (funcName[scriptTextPos] == '"') {
-                        if (arrayStrPos > 0)
-                            ++scriptCodePos;
+                        if (scriptTextByteID > 0)
+                            ++scriptDataPos;
                         scriptTextPos = -1;
                     }
                     else {
@@ -1324,49 +1152,42 @@ void ConvertFunctionText(char *text)
                 }
             }
             else {
-                scriptCode[scriptCodePos++] = SCRIPTVAR_VAR;
-                if (arrayStr[0]) {
-                    scriptCode[scriptCodePos] = VARARR_ARRAY;
-
-                    if (arrayStr[0] == '+')
-                        scriptCode[scriptCodePos] = VARARR_ENTNOPLUS1;
-
-                    if (arrayStr[0] == '-')
-                        scriptCode[scriptCodePos] = VARARR_ENTNOMINUS1;
-
-                    ++scriptCodePos;
-
-                    if (arrayStr[0] == '-' || arrayStr[0] == '+') {
-                        for (int i = 0; i < StrLength(arrayStr); ++i) arrayStr[i] = arrayStr[i + 1];
+                scriptData[scriptDataPos++] = SCRIPTVAR_VAR;
+                if (strBuffer[0]) {
+                    scriptData[scriptDataPos] = VARARR_ARRAY;
+                    if (strBuffer[0] == '+')
+                        scriptData[scriptDataPos] = VARARR_ENTNOPLUS1;
+                    if (strBuffer[0] == '-')
+                        scriptData[scriptDataPos] = VARARR_ENTNOMINUS1;
+                    ++scriptDataPos;
+                    if (strBuffer[0] == '-' || strBuffer[0] == '+') {
+                        for (int i = 0; i < StrLength(strBuffer); ++i) strBuffer[i] = strBuffer[i + 1];
                     }
-
-                    if (ConvertStringToInteger(arrayStr, &constant)) {
-                        scriptCode[scriptCodePos++] = 0;
-                        scriptCode[scriptCodePos++] = constant;
+                    if (ConvertStringToInteger(strBuffer, &value) == 1) {
+                        scriptData[scriptDataPos++] = 0;
+                        scriptData[scriptDataPos++] = value;
                     }
                     else {
-                        if (StrComp(arrayStr, "ArrayPos0"))
-                            constant = 0;
-                        if (StrComp(arrayStr, "ArrayPos1"))
-                            constant = 1;
-                        if (StrComp(arrayStr, "TempObjectPos"))
-                            constant = 2;
-
-                        scriptCode[scriptCodePos++] = 1;
-                        scriptCode[scriptCodePos++] = constant;
+                        if (StrComp(strBuffer, "ArrayPos0"))
+                            value = 0;
+                        if (StrComp(strBuffer, "ArrayPos1"))
+                            value = 1;
+                        if (StrComp(strBuffer, "TempObjectPos"))
+                            value = 2;
+                        scriptData[scriptDataPos++] = 1;
+                        scriptData[scriptDataPos++] = value;
                     }
                 }
                 else {
-                    scriptCode[scriptCodePos++] = VARARR_NONE;
+                    scriptData[scriptDataPos++] = VARARR_NONE;
                 }
-
-                constant = -1;
+                value = -1;
                 for (int i = 0; i < VAR_MAX_CNT; ++i) {
                     if (StrComp(funcName, variableNames[i]))
-                        constant = i;
+                        value = i;
                 }
 
-                if (constant == -1 && Engine.gameMode != ENGINE_SCRIPTERROR) {
+                if (value == -1 && Engine.gameMode != ENGINE_SCRIPTERROR) {
                     SetupTextMenu(&gameMenu[0], 0);
                     AddTextMenuEntry(&gameMenu[0], "SCRIPT PARSING FAILED");
                     AddTextMenuEntry(&gameMenu[0], " ");
@@ -1378,53 +1199,77 @@ void ConvertFunctionText(char *text)
                     AppendIntegerToString(funcName, lineID);
                     AddTextMenuEntry(&gameMenu[0], funcName);
                     Engine.gameMode = ENGINE_SCRIPTERROR;
-                    constant        = 0;
+                    value           = 0;
                 }
-
-                scriptCode[scriptCodePos++] = constant;
+                scriptData[scriptDataPos++] = value;
             }
         }
     }
 }
 void CheckCaseNumber(char *text)
 {
-    if (FindStringToken(text, "case", 1) != 0)
+    if (FindStringToken(text, "case", 1))
         return;
 
-    char caseString[128];
+    char dest[128];
+    int destStrPos = 0;
     char caseChar  = text[4];
-
-    int textPos    = 5;
-    int caseStrPos = 0;
-    while (caseChar) {
-        if (caseChar != ':')
-            caseString[caseStrPos++] = caseChar;
-        caseChar = text[textPos++];
+    if (text[4]) {
+        int textPos    = 5;
+        do {
+            if (caseChar != ':')
+                dest[destStrPos++] = caseChar;
+            caseChar = text[textPos++];
+        } while (caseChar);
     }
-    caseString[caseStrPos] = 0;
-
-    for (int a = 0; a < aliasCount; ++a) {
-        if (StrComp(aliases[a].name, caseString)) {
-            StrCopy(caseString, aliases[a].value);
-            break;
-        }
+    else {
+        destStrPos = 0;
+    }
+    dest[destStrPos] = 0;
+    int aliasVarID   = 0;
+    if (aliasCount) {
+        aliasVarID = 0;
+        do {
+            while (!StrComp(dest, aliases[aliasVarID].name)) {
+                if (aliasCount <= ++aliasVarID)
+                    goto CONV_VAL;
+            }
+            StrCopy(dest, aliases[aliasVarID++].value);
+        } while (aliasCount > aliasVarID);
     }
 
-    int caseID = 0;
-    if (ConvertStringToInteger(caseString, &caseID)) {
-        int stackValue = jumpTableStack[jumpTableStackPos];
-        if (caseID < jumpTable[stackValue])
-            jumpTable[stackValue] = caseID;
-        stackValue++;
-        if (caseID > jumpTable[stackValue])
-            jumpTable[stackValue] = caseID;
-    }
+CONV_VAL:
+    if (ConvertStringToInteger(dest, &aliasVarID) != 1)
+        return;
+    int stackValue = jumpTableStack[jumpTableStackPos];
+    if (aliasVarID < jumpTableData[stackValue])
+        jumpTableData[stackValue] = aliasVarID;
+    stackValue++;
+    if (aliasVarID > jumpTableData[stackValue])
+        jumpTableData[stackValue] = aliasVarID;
 }
 bool ReadSwitchCase(char *text)
 {
     char caseText[0x80];
-    if (FindStringToken(text, "case", 1) == 0) {
-        int textPos       = 4;
+    if (FindStringToken(text, "case", 1)) {
+        if (FindStringToken(text, "default", 1)) {
+            return false;
+        }
+        else {
+            int jumpTablepos                = jumpTableStack[jumpTableStackPos];
+            jumpTableData[jumpTablepos + 2] = scriptDataPos - scriptDataOffset;
+            int cnt                         = abs(jumpTableData[jumpTablepos + 1] - jumpTableData[jumpTablepos]) + 1;
+
+            int jOffset = jumpTablepos + 4;
+            for (int i = 0; i < cnt; ++i) {
+                if (jumpTableData[jOffset + i] < 0)
+                    jumpTableData[jOffset + i] = scriptDataPos - scriptDataOffset;
+            }
+            return true;
+        }
+    }
+    else {
+        int textPos      = 4;
         int caseStringPos = 0;
         while (text[textPos]) {
             if (text[textPos] != ':')
@@ -1442,22 +1287,9 @@ bool ReadSwitchCase(char *text)
         int jPos    = jumpTableStack[jumpTableStackPos];
         int jOffset = jPos + 4;
         if (ConvertStringToInteger(caseText, &val))
-            jumpTable[val - jumpTable[jPos] + jOffset] = scriptCodePos - scriptCodeOffset;
+            jumpTableData[val - jumpTableData[jPos] + jOffset] = scriptDataPos - scriptDataOffset;
         return true;
     }
-    else if (FindStringToken(text, "default", 1) == 0) {
-        int jumpTablepos                = jumpTableStack[jumpTableStackPos];
-        jumpTable[jumpTablepos + 2] = scriptCodePos - scriptCodeOffset;
-        int cnt                         = abs(jumpTable[jumpTablepos + 1] - jumpTable[jumpTablepos]) + 1;
-
-        int jOffset = jumpTablepos + 4;
-        for (int i = 0; i < cnt; ++i) {
-            if (jumpTable[jOffset + i] < 0)
-                jumpTable[jOffset + i] = scriptCodePos - scriptCodeOffset;
-        }
-        return true;
-    }
-
     return false;
 }
 void AppendIntegerToString(char *text, int value)
@@ -1474,7 +1306,7 @@ void AppendIntegerToString(char *text, int value)
     while (v != 0) {
         v /= 10;
         cnt++;
-    }
+    } 
 
     v = 0;
     for (int i = cnt - 1; i >= 0; --i) {
@@ -1483,7 +1315,7 @@ void AppendIntegerToString(char *text, int value)
 
         int strValue = v + '0';
         if (strValue < '0' || strValue > '9') {
-            // what
+            //what
         }
         text[textPos++] = strValue;
     }
@@ -1491,8 +1323,6 @@ void AppendIntegerToString(char *text, int value)
         text[textPos++] = '0';
     text[textPos] = 0;
 }
-#endif
-
 bool ConvertStringToInteger(char *text, int *value)
 {
     int charID    = 0;
@@ -1565,8 +1395,6 @@ bool ConvertStringToInteger(char *text, int *value)
         *value = -*value;
     return true;
 }
-
-#if RETRO_USE_COMPILER
 void CopyAliasStr(char *dest, char *text, bool arrayIndex)
 {
     int textPos     = 0;
@@ -1698,166 +1526,145 @@ void ParseScriptFile(char *scriptName, int scriptID)
                     CheckAliasText(scriptText);
                     if (StrComp(scriptText, "subObjectMain")) {
                         parseMode                                        = PARSEMODE_FUNCTION;
-                        objectScriptList[scriptID].subMain.scriptCodePtr = scriptCodePos;
-                        objectScriptList[scriptID].subMain.jumpTablePtr  = jumpTablePos;
-                        scriptCodeOffset                                 = scriptCodePos;
-                        jumpTableOffset                              = jumpTablePos;
+                        objectScriptList[scriptID].subMain.scriptCodePtr = scriptDataPos;
+                        objectScriptList[scriptID].subMain.jumpTablePtr  = jumpTableDataPos;
+                        scriptDataOffset                                 = scriptDataPos;
+                        jumpTableDataOffset                              = jumpTableDataPos;
                     }
                     if (StrComp(scriptText, "subObjectPlayerInteraction")) {
                         parseMode                                                     = PARSEMODE_FUNCTION;
-                        objectScriptList[scriptID].subPlayerInteraction.scriptCodePtr = scriptCodePos;
-                        objectScriptList[scriptID].subPlayerInteraction.jumpTablePtr  = jumpTablePos;
-                        scriptCodeOffset                                              = scriptCodePos;
-                        jumpTableOffset                                           = jumpTablePos;
+                        objectScriptList[scriptID].subPlayerInteraction.scriptCodePtr = scriptDataPos;
+                        objectScriptList[scriptID].subPlayerInteraction.jumpTablePtr  = jumpTableDataPos;
+                        scriptDataOffset                                              = scriptDataPos;
+                        jumpTableDataOffset                                           = jumpTableDataPos;
                     }
                     if (StrComp(scriptText, "subObjectDraw")) {
                         parseMode                                        = PARSEMODE_FUNCTION;
-                        objectScriptList[scriptID].subDraw.scriptCodePtr = scriptCodePos;
-                        objectScriptList[scriptID].subDraw.jumpTablePtr  = jumpTablePos;
-                        scriptCodeOffset                                 = scriptCodePos;
-                        jumpTableOffset                              = jumpTablePos;
+                        objectScriptList[scriptID].subDraw.scriptCodePtr = scriptDataPos;
+                        objectScriptList[scriptID].subDraw.jumpTablePtr  = jumpTableDataPos;
+                        scriptDataOffset                                 = scriptDataPos;
+                        jumpTableDataOffset                              = jumpTableDataPos;
                     }
                     if (StrComp(scriptText, "subObjectStartup")) {
                         parseMode                                           = PARSEMODE_FUNCTION;
-                        objectScriptList[scriptID].subStartup.scriptCodePtr = scriptCodePos;
-                        objectScriptList[scriptID].subStartup.jumpTablePtr  = jumpTablePos;
-                        scriptCodeOffset                                    = scriptCodePos;
-                        jumpTableOffset                                 = jumpTablePos;
+                        objectScriptList[scriptID].subStartup.scriptCodePtr = scriptDataPos;
+                        objectScriptList[scriptID].subStartup.jumpTablePtr  = jumpTableDataPos;
+                        scriptDataOffset                                    = scriptDataPos;
+                        jumpTableDataOffset                                 = jumpTableDataPos;
                     }
-
-                    if (FindStringToken(scriptText, "function", 1) == 0) { // regular decl.
+                    if (FindStringToken(scriptText, "function", 1)) {
+                        if (FindStringToken(scriptText, "function", 1) == 1) {
+                            char funcName[0x20];
+                            for (textPos = 9; scriptText[textPos]; ++textPos) funcName[textPos - 9] = scriptText[textPos];
+                            funcName[textPos - 9] = 0;
+                            int funcID             = -1;
+                            for (int f = 0; f < scriptFunctionCount; ++f) {
+                                if (StrComp(funcName, scriptFunctionNames[f]))
+                                    funcID = f;
+                            }
+                            if (scriptFunctionCount < FUNCTION_COUNT && funcID == -1) {
+                                StrCopy(scriptFunctionNames[scriptFunctionCount++], funcName);
+                            }
+                            parseMode = PARSEMODE_SCOPELESS;
+                        }
+                    }
+                    else {
                         char funcName[0x20];
                         for (textPos = 8; scriptText[textPos]; ++textPos) funcName[textPos - 8] = scriptText[textPos];
                         funcName[textPos - 8] = 0;
-
-                        int funcID = -1;
+                        int funcID             = -1;
                         for (int f = 0; f < scriptFunctionCount; ++f) {
-                            if (StrComp(funcName, scriptFunctionList[f].name))
+                            if (StrComp(funcName, scriptFunctionNames[f]))
                                 funcID = f;
                         }
-
                         if (funcID <= -1) {
                             if (scriptFunctionCount >= FUNCTION_COUNT) {
                                 parseMode = PARSEMODE_SCOPELESS;
                             }
                             else {
-                                StrCopy(scriptFunctionList[scriptFunctionCount].name, funcName);
-                                scriptFunctionList[scriptFunctionCount].ptr.scriptCodePtr = scriptCodePos;
-                                scriptFunctionList[scriptFunctionCount].ptr.jumpTablePtr  = jumpTablePos;
-                                scriptCodeOffset                                          = scriptCodePos;
-                                jumpTableOffset                                           = jumpTablePos;
-                                parseMode                                                 = PARSEMODE_FUNCTION;
+                                StrCopy(scriptFunctionNames[scriptFunctionCount], funcName);
+                                functionScriptList[scriptFunctionCount].scriptCodePtr = scriptDataPos;
+                                functionScriptList[scriptFunctionCount].jumpTablePtr  = jumpTableDataPos;
+                                scriptDataOffset                                      = scriptDataPos;
+                                jumpTableDataOffset                                   = jumpTableDataPos;
+                                parseMode                                             = PARSEMODE_FUNCTION;
                                 ++scriptFunctionCount;
                             }
                         }
                         else {
-                            StrCopy(scriptFunctionList[funcID].name, funcName);
-                            scriptFunctionList[funcID].ptr.scriptCodePtr = scriptCodePos;
-                            scriptFunctionList[funcID].ptr.jumpTablePtr  = jumpTablePos;
-                            scriptCodeOffset                             = scriptCodePos;
-                            jumpTableOffset                              = jumpTablePos;
-                            parseMode                                    = PARSEMODE_FUNCTION;
+                            StrCopy(scriptFunctionNames[funcID], funcName);
+                            functionScriptList[funcID].scriptCodePtr = scriptDataPos;
+                            functionScriptList[funcID].jumpTablePtr               = jumpTableDataPos;
+                            scriptDataOffset                                      = scriptDataPos;
+                            jumpTableDataOffset                                   = jumpTableDataPos;
+                            parseMode                                             = PARSEMODE_FUNCTION;
                         }
-                    }
-                    else if (FindStringToken(scriptText, "function", 1) == 1) { // forward decl.
-                        char funcName[0x20];
-                        for (textPos = 9; scriptText[textPos]; ++textPos) funcName[textPos - 9] = scriptText[textPos];
-                        funcName[textPos - 9] = 0;
-
-                        int funcID = -1;
-                        for (int f = 0; f < scriptFunctionCount; ++f) {
-                            if (StrComp(funcName, scriptFunctionList[f].name))
-                                funcID = f;
-                        }
-
-                        if (scriptFunctionCount < FUNCTION_COUNT && funcID == -1) {
-                            StrCopy(scriptFunctionList[scriptFunctionCount++].name, funcName);
-                        }
-
-                        parseMode = PARSEMODE_SCOPELESS;
                     }
                     break;
-
                 case PARSEMODE_PLATFORMSKIP:
                     ++lineID;
-
-                    if (FindStringToken(scriptText, "#endplatform", 1) == 0)
+                    if (!FindStringToken(scriptText, "#endplatform", 1))
                         parseMode = PARSEMODE_FUNCTION;
                     break;
-
                 case PARSEMODE_FUNCTION:
                     ++lineID;
-
                     if (scriptText[0]) {
                         if (StrComp(scriptText, "endsub")) {
-                            scriptCode[scriptCodePos++] = FUNC_END;
+                            scriptData[scriptDataPos++] = FUNC_END;
                             parseMode                   = PARSEMODE_SCOPELESS;
                         }
                         else if (StrComp(scriptText, "endfunction")) {
-                            scriptCode[scriptCodePos++] = FUNC_ENDFUNCTION;
+                            scriptData[scriptDataPos++] = FUNC_ENDFUNCTION;
                             parseMode                   = PARSEMODE_SCOPELESS;
                         }
-                        else if (FindStringToken(scriptText, "#platform:", 1) == 0) {
-                            if (FindStringToken(scriptText, Engine.gamePlatform, 1) == -1
-                                && FindStringToken(scriptText, Engine.gameRenderType, 1) == -1
-#if RETRO_USE_HAPTICS
-                                && FindStringToken(scriptText, Engine.gameHapticSetting, 1) == -1
-#endif
-#if !RETRO_USE_ORIGINAL_CODE
-                                && FindStringToken(scriptText, Engine.releaseType, 1) == -1 && FindStringToken(scriptText, "Use_Decomp", 1) == -1
-#endif
-#if RETRO_USE_MOD_LOADER
-                                && FindStringToken(scriptText, "Use_Mod_Loader", 1) == -1
-#endif
-                            ) { // if NONE of these checks succeeded, then we skip everything until "end platform"
-                                parseMode = PARSEMODE_PLATFORMSKIP;
-                            }
-                        }
-                        else if (FindStringToken(scriptText, "#endplatform", 1) == -1) {
-                            ConvertIfWhileStatement(scriptText);
-
-                            if (ConvertSwitchStatement(scriptText)) {
-                                parseMode    = PARSEMODE_SWITCHREAD;
-                                info.readPos = (int)GetFilePosition();
-                                switchDeep   = 0;
-                            }
-
-                            ConvertArithmaticSyntax(scriptText);
-
-                            if (!ReadSwitchCase(scriptText)) {
-                                ConvertFunctionText(scriptText);
-
-                                if (Engine.gameMode == ENGINE_SCRIPTERROR) {
-                                    AddTextMenuEntry(&gameMenu[0], " ");
-                                    AddTextMenuEntry(&gameMenu[0], "ERROR IN");
-                                    AddTextMenuEntry(&gameMenu[0], scriptName);
-                                    parseMode = PARSEMODE_ERROR;
+                        else if (FindStringToken(scriptText, "#platform:", 1)) { //layed out like ass, but this means "if we did not find "#platform:"
+                            if (FindStringToken(scriptText, "#endplatform", 1) == -1) { //if we did NOT find "#endplatform"
+                                ConvertIfWhileStatement(scriptText);
+                                if (ConvertSwitchStatement(scriptText)) {
+                                    parseMode    = PARSEMODE_SWITCHREAD;
+                                    info.readPos = (int)GetFilePosition();
+                                    switchDeep   = 0;
+                                }
+                                ConvertArithmaticSyntax(scriptText);
+                                if (!ReadSwitchCase(scriptText)) {
+                                    ConvertFunctionText(scriptText);
+                                    if (Engine.gameMode == ENGINE_SCRIPTERROR) {
+                                        AddTextMenuEntry(&gameMenu[0], " ");
+                                        AddTextMenuEntry(&gameMenu[0], "ERROR IN");
+                                        AddTextMenuEntry(&gameMenu[0], scriptName);
+                                        parseMode = PARSEMODE_ERROR;
+                                    }
                                 }
                             }
                         }
+                        else if (FindStringToken(scriptText, Engine.gamePlatform, 1) == -1
+                                 && FindStringToken(scriptText, Engine.gameRenderType, 1) == -1
+#if RETRO_USE_HAPTICS
+                                 && FindStringToken(scriptText, Engine.gameHapticSetting, 1) == -1)
+#endif
+                        { //if NONE of these checks succeeded, then we skip everything until "end platform"
+                            parseMode = PARSEMODE_PLATFORMSKIP;
+                        }
                     }
                     break;
-
                 case PARSEMODE_SWITCHREAD:
-                    if (FindStringToken(scriptText, "switch", 1) == 0)
+                    if (!FindStringToken(scriptText, "switch", 1))
                         ++switchDeep;
-
                     if (switchDeep) {
-                        if (FindStringToken(scriptText, "endswitch", 1) == 0)
+                        if (!FindStringToken(scriptText, "endswitch", 1))
                             --switchDeep;
                     }
-                    else if (FindStringToken(scriptText, "endswitch", 1) == 0) {
+                    else if (FindStringToken(scriptText, "endswitch", 1)) {
+                        CheckCaseNumber(scriptText);
+                    }
+                    else {
                         SetFilePosition(info.readPos);
                         parseMode  = PARSEMODE_FUNCTION;
                         int jPos   = jumpTableStack[jumpTableStackPos];
-                        switchDeep = abs(jumpTable[jPos + 1] - jumpTable[jPos]) + 1;
-                        for (textPos = 0; textPos < switchDeep; ++textPos) jumpTable[jumpTablePos++] = -1;
-                    }
-                    else {
-                        CheckCaseNumber(scriptText);
+                        switchDeep = abs(jumpTableData[jPos + 1] - jumpTableData[jPos]) + 1;
+                        for (textPos = 0; textPos < switchDeep; ++textPos) jumpTableData[jumpTableDataPos++] = -1;
                     }
                     break;
-
                 default: break;
             }
         }
@@ -1865,9 +1672,6 @@ void ParseScriptFile(char *scriptName, int scriptID)
         CloseFile();
     }
 }
-
-#endif
-
 void LoadBytecode(int stageListID, int scriptID)
 {
     char scriptPath[0x40];
@@ -1881,9 +1685,7 @@ void LoadBytecode(int stageListID, int scriptID)
                 StrAdd(scriptPath, stageList[stageListID][stageListPosition].folder);
                 StrAdd(scriptPath, ".bin");
                 break;
-
             case 4: StrCopy(scriptPath, "Data/Scripts/ByteCode/GlobalCode.bin"); break;
-
             default: break;
         }
     }
@@ -1891,7 +1693,7 @@ void LoadBytecode(int stageListID, int scriptID)
         StrCopy(scriptPath, "Data/Scripts/ByteCode/GS000.bin");
         int pos = StrLength(scriptPath) - 9;
         if (stageListID < STAGELIST_MAX) {
-            char listIDs[4]     = { 'P', 'R', 'B', 'S' };
+            char listIDs[4]     = { 'P', 'R', 'B', 'S'};
             scriptPath[pos]     = listIDs[stageListID];
             scriptPath[pos + 2] = stageListPosition / 100 + '0';
             scriptPath[pos + 3] = stageListPosition % 100 / 10 + '0';
@@ -1902,211 +1704,199 @@ void LoadBytecode(int stageListID, int scriptID)
     FileInfo info;
     if (LoadFile(scriptPath, &info)) {
         byte fileBuffer = 0;
-        int *scriptCodePtr = &scriptCode[scriptCodePos];
-        int *jumpTablePtr       = &jumpTable[jumpTablePos];
+        int *scrData   = &scriptData[scriptCodePos];
+        FileRead(&fileBuffer, 1);
+        int scriptDataCount = fileBuffer;
+        FileRead(&fileBuffer, 1);
+        scriptDataCount += (fileBuffer << 8);
+        FileRead(&fileBuffer, 1);
+        scriptDataCount += (fileBuffer << 16);
+        FileRead(&fileBuffer, 1);
+        scriptDataCount += (fileBuffer << 24);
 
-        FileRead(&fileBuffer, 1);
-        int scriptCodeSize = fileBuffer;
-        FileRead(&fileBuffer, 1);
-        scriptCodeSize |= fileBuffer << 8;
-        FileRead(&fileBuffer, 1);
-        scriptCodeSize |= fileBuffer << 16;
-        FileRead(&fileBuffer, 1);
-        scriptCodeSize |= fileBuffer << 24;
-
-        while (scriptCodeSize > 0) {
+        while (scriptDataCount > 0) {
             FileRead(&fileBuffer, 1);
-            int blockSize = fileBuffer & 0x7F;
-
+            int buf = fileBuffer & 0x7F;
             if (fileBuffer >= 0x80) {
-                while (blockSize > 0) {
+                while (buf > 0) {
                     FileRead(&fileBuffer, 1);
-                    *scriptCodePtr = fileBuffer;
+                    int data = fileBuffer;
                     FileRead(&fileBuffer, 1);
-                    *scriptCodePtr |= fileBuffer << 8;
+                    data += fileBuffer << 8;
                     FileRead(&fileBuffer, 1);
-                    *scriptCodePtr |= fileBuffer << 16;
+                    data += fileBuffer << 16;
                     FileRead(&fileBuffer, 1);
-                    *scriptCodePtr |= fileBuffer << 24;
-
-                    ++scriptCodePtr;
+                    data += fileBuffer << 24;
+                    *scrData = data;
+                    ++scrData;
                     ++scriptCodePos;
-                    --scriptCodeSize;
-                    --blockSize;
+                    --scriptDataCount;
+                    --buf;
                 }
             }
             else {
-                while (blockSize > 0) {
+                while (buf > 0) {
                     FileRead(&fileBuffer, 1);
-                    *scriptCodePtr = fileBuffer;
-
-                    ++scriptCodePtr;
+                    *scrData = fileBuffer;
+                    ++scrData;
                     ++scriptCodePos;
-                    --scriptCodeSize;
-                    --blockSize;
+                    --scriptDataCount;
+                    --buf;
                 }
             }
         }
 
+        int *jumpPtr = &jumpTableData[jumpTablePos];
         FileRead(&fileBuffer, 1);
-        int jumpTableSize = fileBuffer;
+        int jumpDataCnt = fileBuffer;
         FileRead(&fileBuffer, 1);
-        jumpTableSize |= fileBuffer << 8;
+        jumpDataCnt += fileBuffer << 8;
         FileRead(&fileBuffer, 1);
-        jumpTableSize |= fileBuffer << 16;
+        jumpDataCnt += fileBuffer << 16;
         FileRead(&fileBuffer, 1);
-        jumpTableSize |= fileBuffer << 24;
+        jumpDataCnt += fileBuffer << 24;
 
-        while (jumpTableSize > 0) {
+        while (jumpDataCnt > 0) {
             FileRead(&fileBuffer, 1);
-            int blockSize = fileBuffer & 0x7F;
-
+            int buf = fileBuffer & 0x7F;
             if (fileBuffer >= 0x80) {
-                while (blockSize > 0) {
+                while (buf > 0) {
                     FileRead(&fileBuffer, 1);
-                    *jumpTablePtr = fileBuffer;
+                    int data = fileBuffer;
                     FileRead(&fileBuffer, 1);
-                    *jumpTablePtr |= fileBuffer << 8;
+                    data += fileBuffer << 8;
                     FileRead(&fileBuffer, 1);
-                    *jumpTablePtr |= fileBuffer << 16;
+                    data += fileBuffer << 16;
                     FileRead(&fileBuffer, 1);
-                    *jumpTablePtr |= fileBuffer << 24;
-
-                    ++jumpTablePtr;
+                    data += fileBuffer << 24;
+                    *jumpPtr = data;
+                    ++jumpPtr;
                     ++jumpTablePos;
-                    --jumpTableSize;
-                    --blockSize;
+                    --jumpDataCnt;
+                    --buf;
                 }
             }
             else {
-                while (blockSize > 0) {
+                while (buf > 0) {
                     FileRead(&fileBuffer, 1);
-                    *jumpTablePtr = fileBuffer;
-
-                    ++jumpTablePtr;
+                    *jumpPtr = fileBuffer;
+                    ++jumpPtr;
                     ++jumpTablePos;
-                    --jumpTableSize;
-                    --blockSize;
+                    --jumpDataCnt;
+                    --buf;
                 }
             }
         }
-
         FileRead(&fileBuffer, 1);
-        int scriptCount = fileBuffer;
+        int objectCount = fileBuffer;
         FileRead(&fileBuffer, 1);
-        scriptCount |= fileBuffer << 8;
+        objectCount += fileBuffer << 8;
 
-        for (int s = 0; s < scriptCount; ++s) {
-            ObjectScript *script = &objectScriptList[scriptID + s];
-
-            script->mobile = Engine.bytecodeMode == BYTECODE_MOBILE;
-
-            FileRead(&fileBuffer, 1);
-            script->subMain.scriptCodePtr = fileBuffer;
-            FileRead(&fileBuffer, 1);
-            script->subMain.scriptCodePtr |= fileBuffer << 8;
-            FileRead(&fileBuffer, 1);
-            script->subMain.scriptCodePtr |= fileBuffer << 16;
-            FileRead(&fileBuffer, 1);
-            script->subMain.scriptCodePtr |= fileBuffer << 24;
+        int objType = scriptID;
+        for (int i = 0; i < objectCount; ++i) {
+            objectScriptList[objType].mobile = Engine.bytecodeMode == BYTECODE_MOBILE;
 
             FileRead(&fileBuffer, 1);
-            script->subPlayerInteraction.scriptCodePtr = fileBuffer;
+            int buf = fileBuffer;
             FileRead(&fileBuffer, 1);
-            script->subPlayerInteraction.scriptCodePtr |= fileBuffer << 8;
+            buf += (fileBuffer << 8);
             FileRead(&fileBuffer, 1);
-            script->subPlayerInteraction.scriptCodePtr |= fileBuffer << 16;
+            buf += (fileBuffer << 16);
             FileRead(&fileBuffer, 1);
-            script->subPlayerInteraction.scriptCodePtr |= fileBuffer << 24;
+            objectScriptList[objType].subMain.scriptCodePtr = buf + (fileBuffer << 24);
 
             FileRead(&fileBuffer, 1);
-            script->subDraw.scriptCodePtr = fileBuffer;
+            buf = fileBuffer;
             FileRead(&fileBuffer, 1);
-            script->subDraw.scriptCodePtr |= fileBuffer << 8;
+            buf += (fileBuffer << 8);
             FileRead(&fileBuffer, 1);
-            script->subDraw.scriptCodePtr |= fileBuffer << 16;
+            buf += (fileBuffer << 16);
             FileRead(&fileBuffer, 1);
-            script->subDraw.scriptCodePtr |= fileBuffer << 24;
+            objectScriptList[objType].subPlayerInteraction.scriptCodePtr = buf + (fileBuffer << 24);
 
             FileRead(&fileBuffer, 1);
-            script->subStartup.scriptCodePtr = fileBuffer;
+            buf = fileBuffer;
             FileRead(&fileBuffer, 1);
-            script->subStartup.scriptCodePtr |= fileBuffer << 8;
+            buf += (fileBuffer << 8);
             FileRead(&fileBuffer, 1);
-            script->subStartup.scriptCodePtr |= fileBuffer << 16;
+            buf += (fileBuffer << 16);
             FileRead(&fileBuffer, 1);
-            script->subStartup.scriptCodePtr |= fileBuffer << 24;
+            objectScriptList[objType].subDraw.scriptCodePtr = buf + (fileBuffer << 24);
+
+            FileRead(&fileBuffer, 1);
+            buf = fileBuffer;
+            FileRead(&fileBuffer, 1);
+            buf += (fileBuffer << 8);
+            FileRead(&fileBuffer, 1);
+            buf += (fileBuffer << 16);
+            FileRead(&fileBuffer, 1);
+            objectScriptList[objType++].subStartup.scriptCodePtr = buf + (fileBuffer << 24);
         }
 
-        for (int s = 0; s < scriptCount; ++s) {
-            ObjectScript *script = &objectScriptList[scriptID + s];
+        objType = scriptID;
+        for (int i = 0; i < objectCount; ++i) {
+            FileRead(&fileBuffer, 1);
+            int buf = fileBuffer;
+            FileRead(&fileBuffer, 1);
+            buf += (fileBuffer << 8);
+            FileRead(&fileBuffer, 1);
+            buf += (fileBuffer << 16);
+            FileRead(&fileBuffer, 1);
+            objectScriptList[objType].subMain.jumpTablePtr = buf + (fileBuffer << 24);
 
             FileRead(&fileBuffer, 1);
-            script->subMain.jumpTablePtr = fileBuffer;
+            buf = fileBuffer;
             FileRead(&fileBuffer, 1);
-            script->subMain.jumpTablePtr |= fileBuffer << 8;
+            buf += (fileBuffer << 8);
             FileRead(&fileBuffer, 1);
-            script->subMain.jumpTablePtr |= fileBuffer << 16;
+            buf += (fileBuffer << 16);
             FileRead(&fileBuffer, 1);
-            script->subMain.jumpTablePtr |= fileBuffer << 24;
+            objectScriptList[objType].subPlayerInteraction.jumpTablePtr = buf + (fileBuffer << 24);
 
             FileRead(&fileBuffer, 1);
-            script->subPlayerInteraction.jumpTablePtr = fileBuffer;
+            buf = fileBuffer;
             FileRead(&fileBuffer, 1);
-            script->subPlayerInteraction.jumpTablePtr |= fileBuffer << 8;
+            buf += (fileBuffer << 8);
             FileRead(&fileBuffer, 1);
-            script->subPlayerInteraction.jumpTablePtr |= fileBuffer << 16;
+            buf += (fileBuffer << 16);
             FileRead(&fileBuffer, 1);
-            script->subPlayerInteraction.jumpTablePtr |= fileBuffer << 24;
+            objectScriptList[objType].subDraw.jumpTablePtr = buf + (fileBuffer << 24);
 
             FileRead(&fileBuffer, 1);
-            script->subDraw.jumpTablePtr = fileBuffer;
+            buf = fileBuffer;
             FileRead(&fileBuffer, 1);
-            script->subDraw.jumpTablePtr |= fileBuffer << 8;
+            buf += (fileBuffer << 8);
             FileRead(&fileBuffer, 1);
-            script->subDraw.jumpTablePtr |= fileBuffer << 16;
+            buf += (fileBuffer << 16);
             FileRead(&fileBuffer, 1);
-            script->subDraw.jumpTablePtr |= fileBuffer << 24;
-
-            FileRead(&fileBuffer, 1);
-            script->subStartup.jumpTablePtr = fileBuffer;
-            FileRead(&fileBuffer, 1);
-            script->subStartup.jumpTablePtr |= fileBuffer << 8;
-            FileRead(&fileBuffer, 1);
-            script->subStartup.jumpTablePtr |= fileBuffer << 16;
-            FileRead(&fileBuffer, 1);
-            script->subStartup.jumpTablePtr |= fileBuffer << 24;
+            objectScriptList[objType++].subStartup.jumpTablePtr = buf + (fileBuffer << 24);
         }
 
         FileRead(&fileBuffer, 1);
         int functionCount = fileBuffer;
         FileRead(&fileBuffer, 1);
-        functionCount |= fileBuffer << 8;
+        functionCount += fileBuffer << 8;
 
-        for (int f = 0; f < functionCount; ++f) {
-            ScriptFunction *function = &scriptFunctionList[f];
-
+        for (int i = 0; i < functionCount; ++i) {
             FileRead(&fileBuffer, 1);
-            function->ptr.scriptCodePtr = fileBuffer;
+            int scrPos = fileBuffer;
             FileRead(&fileBuffer, 1);
-            function->ptr.scriptCodePtr |= fileBuffer << 8;
+            scrPos += (fileBuffer << 8);
             FileRead(&fileBuffer, 1);
-            function->ptr.scriptCodePtr |= fileBuffer << 16;
+            scrPos += (fileBuffer << 16);
             FileRead(&fileBuffer, 1);
-            function->ptr.scriptCodePtr |= fileBuffer << 24;
+            functionScriptList[i].scriptCodePtr = scrPos + (fileBuffer << 24);
         }
 
-        for (int f = 0; f < functionCount; ++f) {
-            ScriptFunction *function = &scriptFunctionList[f];
-
+        for (int i = 0; i < functionCount; ++i) {
             FileRead(&fileBuffer, 1);
-            function->ptr.jumpTablePtr = fileBuffer;
+            int jmpPos = fileBuffer;
             FileRead(&fileBuffer, 1);
-            function->ptr.jumpTablePtr |= fileBuffer << 8;
+            jmpPos += (fileBuffer << 8);
             FileRead(&fileBuffer, 1);
-            function->ptr.jumpTablePtr |= fileBuffer << 16;
+            jmpPos += (fileBuffer << 16);
             FileRead(&fileBuffer, 1);
-            function->ptr.jumpTablePtr |= fileBuffer << 24;
+            functionScriptList[i].jumpTablePtr = jmpPos + (fileBuffer << 24);
         }
 
         CloseFile();
@@ -2115,27 +1905,25 @@ void LoadBytecode(int stageListID, int scriptID)
 
 void ClearScriptData()
 {
-    memset(scriptCode, 0, SCRIPTDATA_COUNT * sizeof(int));
-    memset(jumpTable, 0, JUMPTABLE_COUNT * sizeof(int));
+    memset(scriptData, 0, SCRIPTDATA_COUNT * sizeof(int));
+    memset(jumpTableData, 0, JUMPTABLE_COUNT * sizeof(int));
 
     scriptFrameCount = 0;
-
-    scriptCodePos     = 0;
-    jumpTablePos      = 0;
+    
+    scriptCodePos = 0;
+    jumpTablePos  = 0;
     jumpTableStackPos = 0;
     functionStackPos  = 0;
 
-    scriptCodePos    = 0;
-    scriptCodeOffset = 0;
-    jumpTablePos     = 0;
-    jumpTableOffset  = 0;
+    scriptDataPos       = 0;
+    scriptDataOffset    = 0;
+    jumpTableDataPos    = 0;
+    jumpTableDataOffset = 0;
 
-#if RETRO_USE_COMPILER
     scriptFunctionCount = 0;
-#endif
 
     aliasCount = COMMONALIAS_COUNT;
-    lineID     = 0;
+    lineID = 0;
 
     ClearGraphicsData();
     ClearAnimationData();
@@ -2163,66 +1951,56 @@ void ClearScriptData()
     }
 
     for (int f = 0; f < FUNCTION_COUNT; ++f) {
-        scriptFunctionList[f].ptr.scriptCodePtr = SCRIPTDATA_COUNT - 1;
-        scriptFunctionList[f].ptr.jumpTablePtr  = JUMPTABLE_COUNT - 1;
+        functionScriptList[f].scriptCodePtr = SCRIPTDATA_COUNT - 1;
+        functionScriptList[f].jumpTablePtr  = JUMPTABLE_COUNT - 1;
     }
 
     SetObjectTypeName((char *)"Blank Object", 0);
-
-    for (int s = 0; s < COLSTORE_COUNT; s++) {
-        collisionStorage[s].entityNo = -1;
-        collisionStorage[s].type     = -1;
-        collisionStorage[s].left     = 0;
-        collisionStorage[s].top      = 0;
-        collisionStorage[s].right    = 0;
-        collisionStorage[s].bottom   = 0;
-    }
-
 }
 
-void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
+void ProcessScript(int scriptCodePtr, int jumpTablePtr, byte scriptSub)
 {
-    bool running      = true;
-    int scriptCodePtr = scriptCodeStart;
-
-    jumpTableStackPos = 0;
-    functionStackPos  = 0;
+    bool running         = true;
+    int scriptDataPtr    = scriptCodePtr;
+    //int jumpTableDataPtr = jumpTablePtr;
+    jumpTableStackPos    = 0;
+    functionStackPos     = 0;
     while (running) {
-        int opcode           = scriptCode[scriptCodePtr++];
+        int opcode           = scriptData[scriptDataPtr++];
         int opcodeSize       = functions[opcode].opcodeSize;
-        int scriptCodeOffset = scriptCodePtr;
+        int scriptCodeOffset = scriptDataPtr;
 
-        // Get Values
+        // Get Valuess
         for (int i = 0; i < opcodeSize; ++i) {
-            int opcodeType = scriptCode[scriptCodePtr++];
+            int opcodeType = scriptData[scriptDataPtr++];
 
             if (opcodeType == SCRIPTVAR_VAR) {
                 int arrayVal = 0;
-                switch (scriptCode[scriptCodePtr++]) {
+                switch (scriptData[scriptDataPtr++]) {
                     case VARARR_NONE: arrayVal = objectLoop; break;
                     case VARARR_ARRAY:
-                        if (scriptCode[scriptCodePtr++] == 1)
-                            arrayVal = scriptEng.arrayPosition[scriptCode[scriptCodePtr++]];
+                        if (scriptData[scriptDataPtr++] == 1)
+                            arrayVal = scriptEng.arrayPosition[scriptData[scriptDataPtr++]];
                         else
-                            arrayVal = scriptCode[scriptCodePtr++];
+                            arrayVal = scriptData[scriptDataPtr++];
                         break;
                     case VARARR_ENTNOPLUS1:
-                        if (scriptCode[scriptCodePtr++] == 1)
-                            arrayVal = scriptEng.arrayPosition[scriptCode[scriptCodePtr++]] + objectLoop;
+                        if (scriptData[scriptDataPtr++] == 1)
+                            arrayVal = scriptEng.arrayPosition[scriptData[scriptDataPtr++]] + objectLoop;
                         else
-                            arrayVal = scriptCode[scriptCodePtr++] + objectLoop;
+                            arrayVal = scriptData[scriptDataPtr++] + objectLoop;
                         break;
                     case VARARR_ENTNOMINUS1:
-                        if (scriptCode[scriptCodePtr++] == 1)
-                            arrayVal = objectLoop - scriptEng.arrayPosition[scriptCode[scriptCodePtr++]];
+                        if (scriptData[scriptDataPtr++] == 1)
+                            arrayVal = objectLoop - scriptEng.arrayPosition[scriptData[scriptDataPtr++]];
                         else
-                            arrayVal = objectLoop - scriptCode[scriptCodePtr++];
+                            arrayVal = objectLoop - scriptData[scriptDataPtr++];
                         break;
                     default: break;
                 }
 
                 // Variables
-                switch (scriptCode[scriptCodePtr++]) {
+                switch (scriptData[scriptDataPtr++]) {
                     default: break;
                     case VAR_TEMPVALUE0: scriptEng.operands[i] = scriptEng.tempValue[0]; break;
                     case VAR_TEMPVALUE1: scriptEng.operands[i] = scriptEng.tempValue[1]; break;
@@ -2778,8 +2556,8 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                     case VAR_KEYPRESSSTART: scriptEng.operands[i] = keyPress.start; break;
                     case VAR_MENU1SELECTION: scriptEng.operands[i] = gameMenu[0].selection1; break;
                     case VAR_MENU2SELECTION: scriptEng.operands[i] = gameMenu[1].selection1; break;
-                    case VAR_TILELAYERXSIZE: scriptEng.operands[i] = stageLayouts[arrayVal].xsize; break;
-                    case VAR_TILELAYERYSIZE: scriptEng.operands[i] = stageLayouts[arrayVal].ysize; break;
+                    case VAR_TILELAYERXSIZE: scriptEng.operands[i] = stageLayouts[arrayVal].width; break;
+                    case VAR_TILELAYERYSIZE: scriptEng.operands[i] = stageLayouts[arrayVal].height; break;
                     case VAR_TILELAYERTYPE: scriptEng.operands[i] = stageLayouts[arrayVal].type; break;
                     case VAR_TILELAYERANGLE: scriptEng.operands[i] = stageLayouts[arrayVal].angle; break;
                     case VAR_TILELAYERXPOS: scriptEng.operands[i] = stageLayouts[arrayVal].XPos; break;
@@ -2834,25 +2612,33 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                 }
             }
             else if (opcodeType == SCRIPTVAR_INTCONST) { // int constant
-                scriptEng.operands[i] = scriptCode[scriptCodePtr++];
+                scriptEng.operands[i] = scriptData[scriptDataPtr++];
             }
             else if (opcodeType == SCRIPTVAR_STRCONST) { // string constant
-                int strLen         = scriptCode[scriptCodePtr++];
+                int strLen         = scriptData[scriptDataPtr++];
                 scriptText[strLen] = 0;
                 for (int c = 0; c < strLen; ++c) {
                     switch (c % 4) {
-                        case 0: scriptText[c] = scriptCode[scriptCodePtr] >> 24; break;
-
-                        case 1: scriptText[c] = (0xFFFFFF & scriptCode[scriptCodePtr]) >> 16; break;
-
-                        case 2: scriptText[c] = (0xFFFF & scriptCode[scriptCodePtr]) >> 8; break;
-
-                        case 3: scriptText[c] = scriptCode[scriptCodePtr++]; break;
-
+                        case 0: {
+                            scriptText[c] = scriptData[scriptDataPtr] >> 24;
+                            break;
+                        }
+                        case 1: {
+                            scriptText[c] = (0xFFFFFF & scriptData[scriptDataPtr]) >> 16;
+                            break;
+                        }
+                        case 2: {
+                            scriptText[c] = (0xFFFF & scriptData[scriptDataPtr]) >> 8;
+                            break;
+                        }
+                        case 3: {
+                            scriptText[c] = scriptData[scriptDataPtr++];
+                            break;
+                        }
                         default: break;
                     }
                 }
-                scriptCodePtr++;
+                scriptDataPtr++;
             }
         }
 
@@ -2897,43 +2683,43 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                 break;
             case FUNC_IFEQUAL:
                 if (scriptEng.operands[1] != scriptEng.operands[2])
-                    scriptCodePtr = scriptCodeStart + jumpTable[jumpTableStart + scriptEng.operands[0]];
+                    scriptDataPtr = scriptCodePtr + jumpTableData[jumpTablePtr + scriptEng.operands[0]];
                 jumpTableStack[++jumpTableStackPos] = scriptEng.operands[0];
                 opcodeSize                          = 0;
                 break;
             case FUNC_IFGREATER:
                 if (scriptEng.operands[1] <= scriptEng.operands[2])
-                    scriptCodePtr = scriptCodeStart + jumpTable[jumpTableStart + scriptEng.operands[0]];
+                    scriptDataPtr = scriptCodePtr + jumpTableData[jumpTablePtr + scriptEng.operands[0]];
                 jumpTableStack[++jumpTableStackPos] = scriptEng.operands[0];
                 opcodeSize                          = 0;
                 break;
             case FUNC_IFGREATEROREQUAL:
                 if (scriptEng.operands[1] < scriptEng.operands[2])
-                    scriptCodePtr = scriptCodeStart + jumpTable[jumpTableStart + scriptEng.operands[0]];
+                    scriptDataPtr = scriptCodePtr + jumpTableData[jumpTablePtr + scriptEng.operands[0]];
                 jumpTableStack[++jumpTableStackPos] = scriptEng.operands[0];
                 opcodeSize                          = 0;
                 break;
             case FUNC_IFLOWER:
                 if (scriptEng.operands[1] >= scriptEng.operands[2])
-                    scriptCodePtr = scriptCodeStart + jumpTable[jumpTableStart + scriptEng.operands[0]];
+                    scriptDataPtr = scriptCodePtr + jumpTableData[jumpTablePtr + scriptEng.operands[0]];
                 jumpTableStack[++jumpTableStackPos] = scriptEng.operands[0];
                 opcodeSize                          = 0;
                 break;
             case FUNC_IFLOWEROREQUAL:
                 if (scriptEng.operands[1] > scriptEng.operands[2])
-                    scriptCodePtr = scriptCodeStart + jumpTable[jumpTableStart + scriptEng.operands[0]];
+                    scriptDataPtr = scriptCodePtr + jumpTableData[jumpTablePtr + scriptEng.operands[0]];
                 jumpTableStack[++jumpTableStackPos] = scriptEng.operands[0];
                 opcodeSize                          = 0;
                 break;
             case FUNC_IFNOTEQUAL:
                 if (scriptEng.operands[1] == scriptEng.operands[2])
-                    scriptCodePtr = scriptCodeStart + jumpTable[jumpTableStart + scriptEng.operands[0]];
+                    scriptDataPtr = scriptCodePtr + jumpTableData[jumpTablePtr + scriptEng.operands[0]];
                 jumpTableStack[++jumpTableStackPos] = scriptEng.operands[0];
                 opcodeSize                          = 0;
                 break;
             case FUNC_ELSE:
                 opcodeSize    = 0;
-                scriptCodePtr = scriptCodeStart + jumpTable[jumpTableStart + jumpTableStack[jumpTableStackPos--] + 1];
+                scriptDataPtr = scriptCodePtr + jumpTableData[jumpTablePtr + jumpTableStack[jumpTableStackPos--] + 1];
                 break;
             case FUNC_ENDIF:
                 opcodeSize = 0;
@@ -2941,64 +2727,64 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                 break;
             case FUNC_WEQUAL:
                 if (scriptEng.operands[1] != scriptEng.operands[2])
-                    scriptCodePtr = scriptCodeStart + jumpTable[jumpTableStart + scriptEng.operands[0] + 1];
+                    scriptDataPtr = scriptCodePtr + jumpTableData[jumpTablePtr + scriptEng.operands[0] + 1];
                 else
                     jumpTableStack[++jumpTableStackPos] = scriptEng.operands[0];
                 opcodeSize = 0;
                 break;
             case FUNC_WGREATER:
                 if (scriptEng.operands[1] <= scriptEng.operands[2])
-                    scriptCodePtr = scriptCodeStart + jumpTable[jumpTableStart + scriptEng.operands[0] + 1];
+                    scriptDataPtr = scriptCodePtr + jumpTableData[jumpTablePtr + scriptEng.operands[0] + 1];
                 else
                     jumpTableStack[++jumpTableStackPos] = scriptEng.operands[0];
                 opcodeSize = 0;
                 break;
             case FUNC_WGREATEROREQUAL:
                 if (scriptEng.operands[1] < scriptEng.operands[2])
-                    scriptCodePtr = scriptCodeStart + jumpTable[jumpTableStart + scriptEng.operands[0] + 1];
+                    scriptDataPtr = scriptCodePtr + jumpTableData[jumpTablePtr + scriptEng.operands[0] + 1];
                 else
                     jumpTableStack[++jumpTableStackPos] = scriptEng.operands[0];
                 opcodeSize = 0;
                 break;
             case FUNC_WLOWER:
                 if (scriptEng.operands[1] >= scriptEng.operands[2])
-                    scriptCodePtr = scriptCodeStart + jumpTable[jumpTableStart + scriptEng.operands[0] + 1];
+                    scriptDataPtr = scriptCodePtr + jumpTableData[jumpTablePtr + scriptEng.operands[0] + 1];
                 else
                     jumpTableStack[++jumpTableStackPos] = scriptEng.operands[0];
                 opcodeSize = 0;
                 break;
             case FUNC_WLOWEROREQUAL:
                 if (scriptEng.operands[1] > scriptEng.operands[2])
-                    scriptCodePtr = scriptCodeStart + jumpTable[jumpTableStart + scriptEng.operands[0] + 1];
+                    scriptDataPtr = scriptCodePtr + jumpTableData[jumpTablePtr + scriptEng.operands[0] + 1];
                 else
                     jumpTableStack[++jumpTableStackPos] = scriptEng.operands[0];
                 opcodeSize = 0;
                 break;
             case FUNC_WNOTEQUAL:
                 if (scriptEng.operands[1] == scriptEng.operands[2])
-                    scriptCodePtr = scriptCodeStart + jumpTable[jumpTableStart + scriptEng.operands[0] + 1];
+                    scriptDataPtr = scriptCodePtr + jumpTableData[jumpTablePtr + scriptEng.operands[0] + 1];
                 else
                     jumpTableStack[++jumpTableStackPos] = scriptEng.operands[0];
                 opcodeSize = 0;
                 break;
             case FUNC_LOOP:
                 opcodeSize    = 0;
-                scriptCodePtr = scriptCodeStart + jumpTable[jumpTableStart + jumpTableStack[jumpTableStackPos--]];
+                scriptDataPtr = scriptCodePtr + jumpTableData[jumpTablePtr + jumpTableStack[jumpTableStackPos--]];
                 break;
             case FUNC_SWITCH:
                 jumpTableStack[++jumpTableStackPos] = scriptEng.operands[0];
-                if (scriptEng.operands[1] < jumpTable[jumpTableStart + scriptEng.operands[0]]
-                    || scriptEng.operands[1] > jumpTable[jumpTableStart + scriptEng.operands[0] + 1])
-                    scriptCodePtr = scriptCodeStart + jumpTable[jumpTableStart + scriptEng.operands[0] + 2];
+                if (scriptEng.operands[1] < jumpTableData[jumpTablePtr + scriptEng.operands[0]]
+                    || scriptEng.operands[1] > jumpTableData[jumpTablePtr + scriptEng.operands[0] + 1])
+                    scriptDataPtr = scriptCodePtr + jumpTableData[jumpTablePtr + scriptEng.operands[0] + 2];
                 else
-                    scriptCodePtr = scriptCodeStart
-                                    + jumpTable[jumpTableStart + scriptEng.operands[0] + 4
-                                                    + (scriptEng.operands[1] - jumpTable[jumpTableStart + scriptEng.operands[0]])];
+                    scriptDataPtr = scriptCodePtr
+                                    + jumpTableData[jumpTablePtr + scriptEng.operands[0] + 4
+                                                    + (scriptEng.operands[1] - jumpTableData[jumpTablePtr + scriptEng.operands[0]])];
                 opcodeSize = 0;
                 break;
             case FUNC_BREAK:
                 opcodeSize    = 0;
-                scriptCodePtr = scriptCodeStart + jumpTable[jumpTableStart + jumpTableStack[jumpTableStackPos--] + 3];
+                scriptDataPtr = scriptCodePtr + jumpTableData[jumpTablePtr + jumpTableStack[jumpTableStackPos--] + 3];
                 break;
             case FUNC_ENDSWITCH:
                 opcodeSize = 0;
@@ -3006,27 +2792,27 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                 break;
             case FUNC_RAND: scriptEng.operands[0] = rand() % scriptEng.operands[1]; break;
             case FUNC_SIN: {
-                scriptEng.operands[0] = Sin512(scriptEng.operands[1]);
+                scriptEng.operands[0] = sin512(scriptEng.operands[1]);
                 break;
             }
             case FUNC_COS: {
-                scriptEng.operands[0] = Cos512(scriptEng.operands[1]);
+                scriptEng.operands[0] = cos512(scriptEng.operands[1]);
                 break;
             }
             case FUNC_SIN256: {
-                scriptEng.operands[0] = Sin256(scriptEng.operands[1]);
+                scriptEng.operands[0] = sin256(scriptEng.operands[1]);
                 break;
             }
             case FUNC_COS256: {
-                scriptEng.operands[0] = Cos256(scriptEng.operands[1]);
+                scriptEng.operands[0] = cos256(scriptEng.operands[1]);
                 break;
             }
             case FUNC_SINCHANGE: {
-                scriptEng.operands[0] = scriptEng.operands[3] + (Sin512(scriptEng.operands[1]) >> scriptEng.operands[2]) - scriptEng.operands[4];
+                scriptEng.operands[0] = scriptEng.operands[3] + (sin512(scriptEng.operands[1]) >> scriptEng.operands[2]) - scriptEng.operands[4];
                 break;
             }
             case FUNC_COSCHANGE: {
-                scriptEng.operands[0] = scriptEng.operands[3] + (Cos512(scriptEng.operands[1]) >> scriptEng.operands[2]) - scriptEng.operands[4];
+                scriptEng.operands[0] = scriptEng.operands[3] + (cos512(scriptEng.operands[1]) >> scriptEng.operands[2]) - scriptEng.operands[4];
                 break;
             }
             case FUNC_ATAN2: {
@@ -3108,89 +2894,21 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
             }
             case FUNC_DRAWACTNAME: {
                 opcodeSize = 0;
-                int charID = 0;
-
                 switch (scriptEng.operands[3]) {
-                    default: break;
-                    case 0:                      // Draw Word 1 (but aligned from the right instead of left)
-                        charID = 0;
-                        for (charID = 0;; ++charID) {
-                            int nextChar = titleCardText[charID + 1];
-                            if (nextChar == '-' || !nextChar)
-                                break;
-                        }
-
-                        while (charID >= 0) {
-                            int character = titleCardText[charID];
-                            if (character == ' ')
-                                character = -1; // special space char
-                            if (character == '-')
-                                character = 0;
-                            if (character >= '0' && character <= '9')
-                                character -= 22;
-                            if (character > '9' && character < 'f')
-                                character -= 'A';
-
-                            if (character <= -1) {
-                                scriptEng.operands[1] -= scriptEng.operands[5] + scriptEng.operands[6]; // spaceWidth + spacing
-                            }
-                            else {
-                                character += scriptEng.operands[0];
-                                spriteFrame = &scriptFrames[scriptInfo->frameListOffset + character];
-
-                                scriptEng.operands[1] -= spriteFrame->width + scriptEng.operands[6];
-
-                                DrawSprite(scriptEng.operands[1] + spriteFrame->pivotX, scriptEng.operands[2] + spriteFrame->pivotY,
-                                           spriteFrame->width, spriteFrame->height, spriteFrame->sprX, spriteFrame->sprY, scriptInfo->spriteSheetID);
-                            }
-                            charID--;
-                        }
-                        break;
-
-                    case 1: // Draw Word 1
-                        charID = 0;
-
-                        // Draw the first letter as a capital letter, the rest are lowercase (if scriptEng.operands[4] is true, otherwise they're all
-                        // uppercase)
+                    case 1: {
+                        int charID = 0;
                         if (scriptEng.operands[4] == 1 && titleCardText[charID] != 0) {
                             int character = titleCardText[charID];
                             if (character == ' ')
-                                character = -1;
-                            if (character == '-')
                                 character = 0;
-                            if (character >= '0' && character <= '9')
-                                character -= 22;
-                            if (character > '9' && character < 'f')
-                                character -= 'A';
-
-                            if (character <= -1) {
-                                scriptEng.operands[1] += scriptEng.operands[5] + scriptEng.operands[6]; // spaceWidth + spacing
-                            }
-                            else {
-                                character += scriptEng.operands[0];
-                                spriteFrame = &scriptFrames[scriptInfo->frameListOffset + character];
-                                DrawSprite(scriptEng.operands[1] + spriteFrame->pivotX, scriptEng.operands[2] + spriteFrame->pivotY,
-                                           spriteFrame->width, spriteFrame->height, spriteFrame->sprX, spriteFrame->sprY, scriptInfo->spriteSheetID);
-                                scriptEng.operands[1] += spriteFrame->width + scriptEng.operands[6];
-                            }
-
-                            scriptEng.operands[0] += 26;
-                            charID++;
-                        }
-
-                        while (titleCardText[charID] != 0 && titleCardText[charID] != '-') {
-                            int character = titleCardText[charID];
-                            if (character == ' ')
-                                character = -1;
                             if (character == '-')
                                 character = 0;
                             if (character > '/' && character < ':')
                                 character -= 22;
                             if (character > '9' && character < 'f')
                                 character -= 'A';
-
                             if (character <= -1) {
-                                scriptEng.operands[1] += scriptEng.operands[5] + scriptEng.operands[6]; // spaceWidth + spacing
+                                scriptEng.operands[1] += scriptEng.operands[5] + scriptEng.operands[6];
                             }
                             else {
                                 character += scriptEng.operands[0];
@@ -3199,28 +2917,50 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                                            spriteFrame->width, spriteFrame->height, spriteFrame->sprX, spriteFrame->sprY, scriptInfo->spriteSheetID);
                                 scriptEng.operands[1] += spriteFrame->width + scriptEng.operands[6];
                             }
+                            scriptEng.operands[0] = scriptEng.operands[0] + 26;
                             charID++;
                         }
+                        while (titleCardText[charID] != 0) {
+                            if (titleCardText[charID] != '-') {
+                                int character = titleCardText[charID];
+                                if (character == ' ')
+                                    character = 0;
+                                if (character == '-')
+                                    character = 0;
+                                if (character > '/' && character < ':')
+                                    character -= 22;
+                                if (character > '9' && character < 'f')
+                                    character -= 'A';
+                                if (character <= -1) {
+                                    scriptEng.operands[1] += scriptEng.operands[5] + scriptEng.operands[6];
+                                }
+                                else {
+                                    character += scriptEng.operands[0];
+                                    spriteFrame = &scriptFrames[scriptInfo->frameListOffset + character];
+                                    DrawSprite(scriptEng.operands[1] + spriteFrame->pivotX, scriptEng.operands[2] + spriteFrame->pivotY,
+                                               spriteFrame->width, spriteFrame->height, spriteFrame->sprX, spriteFrame->sprY,
+                                               scriptInfo->spriteSheetID);
+                                    scriptEng.operands[1] += spriteFrame->width + scriptEng.operands[6];
+                                }
+                                charID++;
+                            }
+                        }
                         break;
-
-                    case 2: // Draw Word 2
-                        charID = titleCardWord2;
-
-                        // Draw the first letter as a capital letter, the rest are lowercase (if scriptEng.operands[4] is true, otherwise they're all
-                        // uppercase)
+                    }
+                    case 2: {
+                        int charID = titleCardWord2;
                         if (scriptEng.operands[4] == 1 && titleCardText[charID] != 0) {
                             int character = titleCardText[charID];
                             if (character == ' ')
                                 character = 0;
                             if (character == '-')
                                 character = 0;
-                            if (character >= '0' && character <= '9')
+                            if (character > '/' && character < ':')
                                 character -= 22;
                             if (character > '9' && character < 'f')
                                 character -= 'A';
-
                             if (character <= -1) {
-                                scriptEng.operands[1] += scriptEng.operands[5] + scriptEng.operands[6]; // spaceWidth + spacing
+                                scriptEng.operands[1] += scriptEng.operands[5] + scriptEng.operands[6];
                             }
                             else {
                                 character += scriptEng.operands[0];
@@ -3232,20 +2972,18 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                             scriptEng.operands[0] += 26;
                             charID++;
                         }
-
                         while (titleCardText[charID] != 0) {
                             int character = titleCardText[charID];
                             if (character == ' ')
-                                character = -1;
+                                character = 0;
                             if (character == '-')
                                 character = 0;
-                            if (character >= '0' && character <= '9')
+                            if (character > '/' && character < ':')
                                 character -= 22;
                             if (character > '9' && character < 'f')
                                 character -= 'A';
-
                             if (character <= -1) {
-                                scriptEng.operands[1] += scriptEng.operands[5] + scriptEng.operands[6]; // spaceWidth + spacing
+                                scriptEng.operands[1] = scriptEng.operands[1] + scriptEng.operands[5] + scriptEng.operands[6];
                             }
                             else {
                                 character += scriptEng.operands[0];
@@ -3257,6 +2995,7 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                             charID++;
                         }
                         break;
+                    }
                 }
                 break;
             }
@@ -3394,10 +3133,10 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                     case FX_FLIP:
                         switch (entity->direction) {
                             default:
-                            case FLIP_NONE:
+                            case FLIP_NO:
                                 DrawSpriteFlipped((scriptEng.operands[2] >> 16) - xScrollOffset + spriteFrame->pivotX,
                                                   (scriptEng.operands[3] >> 16) - yScrollOffset + spriteFrame->pivotY, spriteFrame->width,
-                                                  spriteFrame->height, spriteFrame->sprX, spriteFrame->sprY, FLIP_NONE, scriptInfo->spriteSheetID);
+                                                  spriteFrame->height, spriteFrame->sprX, spriteFrame->sprY, FLIP_NO, scriptInfo->spriteSheetID);
                                 break;
                             case FLIP_X:
                                 DrawSpriteFlipped((scriptEng.operands[2] >> 16) - xScrollOffset - spriteFrame->width - spriteFrame->pivotX,
@@ -3483,9 +3222,9 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                     case FX_FLIP:
                         switch (entity->direction) {
                             default:
-                            case FLIP_NONE:
+                            case FLIP_NO:
                                 DrawSpriteFlipped(scriptEng.operands[2] + spriteFrame->pivotX, scriptEng.operands[3] + spriteFrame->pivotY,
-                                                  spriteFrame->width, spriteFrame->height, spriteFrame->sprX, spriteFrame->sprY, FLIP_NONE,
+                                                  spriteFrame->width, spriteFrame->height, spriteFrame->sprX, spriteFrame->sprY, FLIP_NO,
                                                   scriptInfo->spriteSheetID);
                                 break;
                             case FLIP_X:
@@ -3549,13 +3288,13 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                 newEnt->propertyValue = scriptEng.operands[2];
                 newEnt->XPos          = scriptEng.operands[3];
                 newEnt->YPos          = scriptEng.operands[4];
-                newEnt->direction     = FLIP_NONE;
+                newEnt->direction     = FLIP_NO;
                 newEnt->frame         = 0;
-                newEnt->priority      = PRIORITY_BOUNDS;
+                newEnt->priority      = PRIORITY_ACTIVE_BOUNDS;
                 newEnt->rotation      = 0;
                 newEnt->state         = 0;
                 newEnt->drawOrder     = 3;
-                newEnt->scale         = 0x200;
+                newEnt->scale         = 512;
                 newEnt->inkEffect     = INK_NONE;
                 newEnt->values[0]     = 0;
                 newEnt->values[1]     = 0;
@@ -3568,7 +3307,7 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                 break;
             }
             case FUNC_PLAYEROBJECTCOLLISION:
-                opcodeSize              = 0;
+                opcodeSize = 0;
                 switch (scriptEng.operands[0]) {
                     default: break;
                     case C_TOUCH:
@@ -3582,7 +3321,7 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                                      entity->XPos + (scriptEng.operands[3] << 16), entity->YPos + (scriptEng.operands[4] << 16));
                         break;
                     case C_BOX2:
-                        // C_PLATFORM if pc ver, as there's no box2 there
+                        // case C_PLATFORM: // if pc ver, there's no box2
                         if (!scriptInfo->mobile) {
                             PlatformCollision(entity->XPos + (scriptEng.operands[1] << 16), entity->YPos + (scriptEng.operands[2] << 16),
                                               entity->XPos + (scriptEng.operands[3] << 16), entity->YPos + (scriptEng.operands[4] << 16));
@@ -3598,16 +3337,6 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                                               entity->XPos + (scriptEng.operands[3] << 16), entity->YPos + (scriptEng.operands[4] << 16));
                         }
                         break;
-                    case C_BOX3:
-                        BoxCollision3(entity->XPos + (scriptEng.operands[1] << 16), entity->YPos + (scriptEng.operands[2] << 16),
-                                      entity->XPos + (scriptEng.operands[3] << 16), entity->YPos + (scriptEng.operands[4] << 16));
-                        break;
-                    case C_ENEMY:
-                        scriptEng.operands[5] = entity->XPos >> 16;
-                        scriptEng.operands[6] = entity->YPos >> 16;
-                        EnemyCollision(scriptEng.operands[5] + scriptEng.operands[1], scriptEng.operands[6] + scriptEng.operands[2],
-                                      scriptEng.operands[5] + scriptEng.operands[3], scriptEng.operands[6] + scriptEng.operands[4]);
-                        break;
                 }
                 break;
             case FUNC_CREATETEMPOBJECT: {
@@ -3619,7 +3348,7 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                 temp->propertyValue  = scriptEng.operands[1];
                 temp->XPos           = scriptEng.operands[2];
                 temp->YPos           = scriptEng.operands[3];
-                temp->direction      = FLIP_NONE;
+                temp->direction      = FLIP_NO;
                 temp->frame          = 0;
                 temp->priority       = PRIORITY_ACTIVE;
                 temp->rotation       = 0;
@@ -3676,7 +3405,7 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
             case FUNC_DRAWPLAYERANIMATION:
                 opcodeSize = 0;
                 if (player->visible) {
-                    if (cameraTarget == activePlayer)
+                    if (cameraEnabled == activePlayer)
                         DrawObjectAnimation(scriptInfo, entity, player->screenXPos, player->screenYPos);
                     else
                         DrawObjectAnimation(scriptInfo, entity, (player->XPos >> 16) - xScrollOffset, (player->YPos >> 16) - yScrollOffset);
@@ -3727,17 +3456,17 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                     case CSIDE_LWALL: ObjectLWallGrip(scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]); break;
                     case CSIDE_RWALL: ObjectRWallGrip(scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]); break;
                     case CSIDE_ROOF: ObjectRoofGrip(scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]); break;
-                    case CSIDE_ENTITY: ObjectEntityGrip(scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]); break;
                 }
                 break;
             case FUNC_LOADVIDEO:
                 opcodeSize = 0;
-                PauseSound();
+                // PauseSound();
+                StopMusic();
                 if (FindStringToken(scriptText, ".rsv", 1) <= -1)
                     PlayVideoFile(scriptText); // not an rsv
                 else
                     scriptInfo->spriteSheetID = AddGraphicsFile(scriptText);
-                ResumeSound();
+                // ResumeSound();
                 break;
             case FUNC_NEXTVIDEOFRAME:
                 opcodeSize = 0;
@@ -3754,16 +3483,16 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
             case FUNC_NOT: scriptEng.operands[0] = ~scriptEng.operands[0]; break;
             case FUNC_DRAW3DSCENE:
                 opcodeSize = 0;
-                TransformVertexBuffer();
-                Sort3DDrawList();
-                Draw3DScene(scriptInfo->spriteSheetID);
+                transformVertexBuffer();
+                sort3DDrawList();
+                draw3DScene(scriptInfo->spriteSheetID);
                 break;
             case FUNC_SETIDENTITYMATRIX:
                 opcodeSize = 0;
                 switch (scriptEng.operands[0]) {
-                    case MAT_WORLD: SetIdentityMatrix(&matWorld); break;
-                    case MAT_VIEW: SetIdentityMatrix(&matView); break;
-                    case MAT_TEMP: SetIdentityMatrix(&matTemp); break;
+                    case MAT_WORLD: setIdentityMatrix(&matWorld); break;
+                    case MAT_VIEW: setIdentityMatrix(&matView); break;
+                    case MAT_TEMP: setIdentityMatrix(&matTemp); break;
                 }
                 break;
             case FUNC_MATRIXMULTIPLY:
@@ -3771,23 +3500,23 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                 switch (scriptEng.operands[0]) {
                     case MAT_WORLD:
                         switch (scriptEng.operands[1]) {
-                            case MAT_WORLD: MatrixMultiply(&matWorld, &matWorld); break;
-                            case MAT_VIEW: MatrixMultiply(&matWorld, &matView); break;
-                            case MAT_TEMP: MatrixMultiply(&matWorld, &matTemp); break;
+                            case MAT_WORLD: matrixMultiply(&matWorld, &matWorld); break;
+                            case MAT_VIEW: matrixMultiply(&matWorld, &matView); break;
+                            case MAT_TEMP: matrixMultiply(&matWorld, &matTemp); break;
                         }
                         break;
                     case MAT_VIEW:
                         switch (scriptEng.operands[1]) {
-                            case MAT_WORLD: MatrixMultiply(&matView, &matWorld); break;
-                            case MAT_VIEW: MatrixMultiply(&matView, &matView); break;
-                            case MAT_TEMP: MatrixMultiply(&matView, &matTemp); break;
+                            case MAT_WORLD: matrixMultiply(&matView, &matWorld); break;
+                            case MAT_VIEW: matrixMultiply(&matView, &matView); break;
+                            case MAT_TEMP: matrixMultiply(&matView, &matTemp); break;
                         }
                         break;
                     case MAT_TEMP:
                         switch (scriptEng.operands[1]) {
-                            case MAT_WORLD: MatrixMultiply(&matTemp, &matWorld); break;
-                            case MAT_VIEW: MatrixMultiply(&matTemp, &matView); break;
-                            case MAT_TEMP: MatrixMultiply(&matTemp, &matTemp); break;
+                            case MAT_WORLD: matrixMultiply(&matTemp, &matWorld); break;
+                            case MAT_VIEW: matrixMultiply(&matTemp, &matView); break;
+                            case MAT_TEMP: matrixMultiply(&matTemp, &matTemp); break;
                         }
                         break;
                 }
@@ -3795,83 +3524,82 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
             case FUNC_MATRIXTRANSLATEXYZ:
                 opcodeSize = 0;
                 switch (scriptEng.operands[0]) {
-                    case MAT_WORLD: MatrixTranslateXYZ(&matWorld, scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]); break;
-                    case MAT_VIEW: MatrixTranslateXYZ(&matView, scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]); break;
-                    case MAT_TEMP: MatrixTranslateXYZ(&matTemp, scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]); break;
+                    case MAT_WORLD: matrixTranslateXYZ(&matWorld, scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]); break;
+                    case MAT_VIEW: matrixTranslateXYZ(&matView, scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]); break;
+                    case MAT_TEMP: matrixTranslateXYZ(&matTemp, scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]); break;
                 }
                 break;
             case FUNC_MATRIXSCALEXYZ:
                 opcodeSize = 0;
                 switch (scriptEng.operands[0]) {
-                    case MAT_WORLD: MatrixScaleXYZ(&matWorld, scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]); break;
-                    case MAT_VIEW: MatrixScaleXYZ(&matView, scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]); break;
-                    case MAT_TEMP: MatrixScaleXYZ(&matTemp, scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]); break;
+                    case MAT_WORLD: matrixScaleXYZ(&matWorld, scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]); break;
+                    case MAT_VIEW: matrixScaleXYZ(&matView, scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]); break;
+                    case MAT_TEMP: matrixScaleXYZ(&matTemp, scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]); break;
                 }
                 break;
             case FUNC_MATRIXROTATEX:
                 opcodeSize = 0;
                 switch (scriptEng.operands[0]) {
-                    case MAT_WORLD: MatrixRotateX(&matWorld, scriptEng.operands[1]); break;
-                    case MAT_VIEW: MatrixRotateX(&matView, scriptEng.operands[1]); break;
-                    case MAT_TEMP: MatrixRotateX(&matTemp, scriptEng.operands[1]); break;
+                    case MAT_WORLD: matrixRotateX(&matWorld, scriptEng.operands[1]); break;
+                    case MAT_VIEW: matrixRotateX(&matView, scriptEng.operands[1]); break;
+                    case MAT_TEMP: matrixRotateX(&matTemp, scriptEng.operands[1]); break;
                 }
                 break;
             case FUNC_MATRIXROTATEY:
                 opcodeSize = 0;
                 switch (scriptEng.operands[0]) {
-                    case MAT_WORLD: MatrixRotateY(&matWorld, scriptEng.operands[1]); break;
-                    case MAT_VIEW: MatrixRotateY(&matView, scriptEng.operands[1]); break;
-                    case MAT_TEMP: MatrixRotateY(&matTemp, scriptEng.operands[1]); break;
+                    case MAT_WORLD: matrixRotateY(&matWorld, scriptEng.operands[1]); break;
+                    case MAT_VIEW: matrixRotateY(&matView, scriptEng.operands[1]); break;
+                    case MAT_TEMP: matrixRotateY(&matTemp, scriptEng.operands[1]); break;
                 }
                 break;
             case FUNC_MATRIXROTATEZ:
                 opcodeSize = 0;
                 switch (scriptEng.operands[0]) {
-                    case MAT_WORLD: MatrixRotateZ(&matWorld, scriptEng.operands[1]); break;
-                    case MAT_VIEW: MatrixRotateZ(&matView, scriptEng.operands[1]); break;
-                    case MAT_TEMP: MatrixRotateZ(&matTemp, scriptEng.operands[1]); break;
+                    case MAT_WORLD: matrixRotateZ(&matWorld, scriptEng.operands[1]); break;
+                    case MAT_VIEW: matrixRotateZ(&matView, scriptEng.operands[1]); break;
+                    case MAT_TEMP: matrixRotateZ(&matTemp, scriptEng.operands[1]); break;
                 }
                 break;
             case FUNC_MATRIXROTATEXYZ:
                 opcodeSize = 0;
                 switch (scriptEng.operands[0]) {
-                    case MAT_WORLD: MatrixRotateXYZ(&matWorld, scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]); break;
-                    case MAT_VIEW: MatrixRotateXYZ(&matView, scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]); break;
-                    case MAT_TEMP: MatrixRotateXYZ(&matTemp, scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]); break;
+                    case MAT_WORLD: matrixRotateXYZ(&matWorld, scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]); break;
+                    case MAT_VIEW: matrixRotateXYZ(&matView, scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]); break;
+                    case MAT_TEMP: matrixRotateXYZ(&matTemp, scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]); break;
                 }
                 break;
             case FUNC_TRANSFORMVERTICES:
                 opcodeSize = 0;
                 switch (scriptEng.operands[0]) {
-                    case MAT_WORLD: TransformVerticies(&matWorld, scriptEng.operands[1], scriptEng.operands[2]); break;
-                    case MAT_VIEW: TransformVerticies(&matView, scriptEng.operands[1], scriptEng.operands[2]); break;
-                    case MAT_TEMP: TransformVerticies(&matTemp, scriptEng.operands[1], scriptEng.operands[2]); break;
+                    case MAT_WORLD: transformVerticies(&matWorld, scriptEng.operands[1], scriptEng.operands[2]); break;
+                    case MAT_VIEW: transformVerticies(&matView, scriptEng.operands[1], scriptEng.operands[2]); break;
+                    case MAT_TEMP: transformVerticies(&matTemp, scriptEng.operands[1], scriptEng.operands[2]); break;
                 }
                 break;
             case FUNC_CALLFUNCTION: {
                 opcodeSize                        = 0;
+                functionStack[functionStackPos++] = scriptDataPtr;
+                functionStack[functionStackPos++] = jumpTablePtr;
                 functionStack[functionStackPos++] = scriptCodePtr;
-                functionStack[functionStackPos++] = jumpTableStart;
-                functionStack[functionStackPos++] = scriptCodeStart;
-                scriptCodeStart                   = scriptFunctionList[scriptEng.operands[0]].ptr.scriptCodePtr;
-                jumpTableStart                    = scriptFunctionList[scriptEng.operands[0]].ptr.jumpTablePtr;
-                scriptCodePtr                     = scriptCodeStart;
+                scriptCodePtr                     = functionScriptList[scriptEng.operands[0]].scriptCodePtr;
+                jumpTablePtr                      = functionScriptList[scriptEng.operands[0]].jumpTablePtr;
+                scriptDataPtr                     = scriptCodePtr;
             } break;
             case FUNC_ENDFUNCTION:
-                opcodeSize      = 0;
-                scriptCodeStart = functionStack[--functionStackPos];
-                jumpTableStart  = functionStack[--functionStackPos];
-                scriptCodePtr   = functionStack[--functionStackPos];
+                opcodeSize    = 0;
+                scriptCodePtr = functionStack[--functionStackPos];
+                jumpTablePtr  = functionStack[--functionStackPos];
+                scriptDataPtr = functionStack[--functionStackPos];
                 break;
             case FUNC_SETLAYERDEFORMATION:
                 opcodeSize = 0;
                 SetLayerDeformation(scriptEng.operands[0], scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3], scriptEng.operands[4],
                                     scriptEng.operands[5]);
                 break;
-            case FUNC_CHECKTOUCHRECT: opcodeSize = 0; scriptEng.checkResult = -1;
-#if !RETRO_USE_ORIGINAL_CODE
-                AddDebugHitbox(H_TYPE_FINGER, NULL, scriptEng.operands[0], scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]);
-#endif
+            case FUNC_CHECKTOUCHRECT:
+                opcodeSize            = 0;
+                scriptEng.checkResult = -1;
                 for (int f = 0; f < touches; ++f) {
                     if (touchDown[f] && touchX[f] > scriptEng.operands[0] && touchX[f] < scriptEng.operands[2] && touchY[f] > scriptEng.operands[1]
                         && touchY[f] < scriptEng.operands[3]) {
@@ -3905,13 +3633,13 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                 drawListEntries[scriptEng.operands[0]].listSize = 0;
                 break;
             case FUNC_ADDDRAWLISTENTITYREF: {
-                opcodeSize                                                                                           = 0;
+                opcodeSize                                              = 0;
                 drawListEntries[scriptEng.operands[0]].entityRefs[drawListEntries[scriptEng.operands[0]].listSize++] = scriptEng.operands[1];
                 break;
             }
             case FUNC_GETDRAWLISTENTITYREF: scriptEng.operands[0] = drawListEntries[scriptEng.operands[1]].entityRefs[scriptEng.operands[2]]; break;
             case FUNC_SETDRAWLISTENTITYREF:
-                opcodeSize                                                               = 0;
+                opcodeSize                                      = 0;
                 drawListEntries[scriptEng.operands[1]].entityRefs[scriptEng.operands[2]] = scriptEng.operands[0];
                 break;
             case FUNC_GET16X16TILEINFO: {
@@ -3946,10 +3674,7 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                 switch (scriptEng.operands[3]) {
                     case TILEINFO_INDEX:
                         tiles128x128.tileIndex[scriptEng.operands[6]]  = scriptEng.operands[0];
-                        if (renderType == RENDER_SW)
-                            tiles128x128.gfxDataPos[scriptEng.operands[6]] = scriptEng.operands[0] << 8;
-                        else if (renderType == RENDER_HW)
-                            tiles128x128.gfxDataPos[scriptEng.operands[6]] = (scriptEng.operands[0] << 2) & 0x3FFFC;
+                        tiles128x128.gfxDataPos[scriptEng.operands[6]] = scriptEng.operands[0] << 8;
                         break;
                     case TILEINFO_DIRECTION: tiles128x128.direction[scriptEng.operands[6]] = scriptEng.operands[0]; break;
                     case TILEINFO_VISUALPLANE: tiles128x128.visualPlane[scriptEng.operands[6]] = scriptEng.operands[0]; break;
@@ -4030,8 +3755,8 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                 opcodeSize = 0;
                 switch (scriptEng.operands[0]) {
                     default: break;
-                    case ONLINEMENU_ACHIEVEMENTS: LoadAchievementsMenu(); break;
-                    case ONLINEMENU_LEADERBOARDS: LoadLeaderboardsMenu(); break;
+                    case ONLINEMENU_ACHIEVEMENTS: LoadLeaderboardsMenu(); break;
+                    case ONLINEMENU_LEADERBOARDS: LoadAchievementsMenu(); break;
                 }
                 break;
             case FUNC_ENGINECALLBACK:
@@ -4041,47 +3766,44 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
 #if RETRO_USE_HAPTICS
             case FUNC_HAPTICEFFECT:
                 opcodeSize = 0;
-                // params: scriptEng.operands[0], scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]
-                if (scriptEng.operands[0] != -1)
-                    QueueHapticEffect(scriptEng.operands[0]);
-                else
-                    PlayHaptics(scriptEng.operands[1], scriptEng.operands[2], scriptEng.operands[3]);
+                // params: scriptEng.Operands[0],scriptEng.Operands[1],scriptEng.Operands[2],scriptEng.Operands[3]
+                QueueHapticEffect(scriptEng.operands[0]);
                 break;
 #endif
         }
 
         // Set Values
         if (opcodeSize > 0)
-            scriptCodePtr -= scriptCodePtr - scriptCodeOffset;
+            scriptDataPtr -= scriptDataPtr - scriptCodeOffset;
         for (int i = 0; i < opcodeSize; ++i) {
-            int opcodeType = scriptCode[scriptCodePtr++];
+            int opcodeType = scriptData[scriptDataPtr++];
             if (opcodeType == SCRIPTVAR_VAR) {
                 int arrayVal = 0;
-                switch (scriptCode[scriptCodePtr++]) { // variable
+                switch (scriptData[scriptDataPtr++]) { // variable
                     case VARARR_NONE: arrayVal = objectLoop; break;
                     case VARARR_ARRAY:
-                        if (scriptCode[scriptCodePtr++] == 1)
-                            arrayVal = scriptEng.arrayPosition[scriptCode[scriptCodePtr++]];
+                        if (scriptData[scriptDataPtr++] == 1)
+                            arrayVal = scriptEng.arrayPosition[scriptData[scriptDataPtr++]];
                         else
-                            arrayVal = scriptCode[scriptCodePtr++];
+                            arrayVal = scriptData[scriptDataPtr++];
                         break;
                     case VARARR_ENTNOPLUS1:
-                        if (scriptCode[scriptCodePtr++] == 1)
-                            arrayVal = scriptEng.arrayPosition[scriptCode[scriptCodePtr++]] + objectLoop;
+                        if (scriptData[scriptDataPtr++] == 1)
+                            arrayVal = scriptEng.arrayPosition[scriptData[scriptDataPtr++]] + objectLoop;
                         else
-                            arrayVal = scriptCode[scriptCodePtr++] + objectLoop;
+                            arrayVal = scriptData[scriptDataPtr++] + objectLoop;
                         break;
                     case VARARR_ENTNOMINUS1:
-                        if (scriptCode[scriptCodePtr++] == 1)
-                            arrayVal = objectLoop - scriptEng.arrayPosition[scriptCode[scriptCodePtr++]];
+                        if (scriptData[scriptDataPtr++] == 1)
+                            arrayVal = objectLoop - scriptEng.arrayPosition[scriptData[scriptDataPtr++]];
                         else
-                            arrayVal = objectLoop - scriptCode[scriptCodePtr++];
+                            arrayVal = objectLoop - scriptData[scriptDataPtr++];
                         break;
                     default: break;
                 }
 
                 // Variables
-                switch (scriptCode[scriptCodePtr++]) {
+                switch (scriptData[scriptDataPtr++]) {
                     default: break;
                     case VAR_TEMPVALUE0: scriptEng.tempValue[0] = scriptEng.operands[i]; break;
                     case VAR_TEMPVALUE1: scriptEng.tempValue[1] = scriptEng.operands[i]; break;
@@ -4541,11 +4263,7 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                     case VAR_STAGEACTIVELAYER: activeTileLayers[arrayVal] = scriptEng.operands[i]; break;
                     case VAR_STAGEMIDPOINT: tLayerMidPoint = scriptEng.operands[i]; break;
                     case VAR_STAGEPLAYERLISTPOS: playerListPos = scriptEng.operands[i]; break;
-                    case VAR_STAGEACTIVEPLAYER:
-                        activePlayer = scriptEng.operands[i];
-                        if (activePlayer > activePlayerCount)
-                            activePlayer = 0;
-                        break;
+                    case VAR_STAGEACTIVEPLAYER: activePlayer = scriptEng.operands[i]; break;
                     case VAR_SCREENCAMERAENABLED: cameraEnabled = scriptEng.operands[i]; break;
                     case VAR_SCREENCAMERATARGET: cameraTarget = scriptEng.operands[i]; break;
                     case VAR_SCREENCAMERASTYLE: cameraStyle = scriptEng.operands[i]; break;
@@ -4590,8 +4308,8 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                     case VAR_KEYPRESSSTART: keyPress.start = scriptEng.operands[i]; break;
                     case VAR_MENU1SELECTION: gameMenu[0].selection1 = scriptEng.operands[i]; break;
                     case VAR_MENU2SELECTION: gameMenu[1].selection1 = scriptEng.operands[i]; break;
-                    case VAR_TILELAYERXSIZE: stageLayouts[arrayVal].xsize = scriptEng.operands[i]; break;
-                    case VAR_TILELAYERYSIZE: stageLayouts[arrayVal].ysize = scriptEng.operands[i]; break;
+                    case VAR_TILELAYERXSIZE: stageLayouts[arrayVal].width = scriptEng.operands[i]; break;
+                    case VAR_TILELAYERYSIZE: stageLayouts[arrayVal].height = scriptEng.operands[i]; break;
                     case VAR_TILELAYERTYPE: stageLayouts[arrayVal].type = scriptEng.operands[i]; break;
                     case VAR_TILELAYERANGLE:
                         stageLayouts[arrayVal].angle = scriptEng.operands[i];
@@ -4646,43 +4364,31 @@ void ProcessScript(int scriptCodeStart, int jumpTableStart, byte scriptSub)
                     case VAR_ENGINEONLINEACTIVE: break;
                     case VAR_ENGINEFRAMESKIPTIMER: Engine.frameSkipTimer = scriptEng.operands[i]; break;
                     case VAR_ENGINEFRAMESKIPSETTING: Engine.frameSkipSetting = scriptEng.operands[i]; break;
-                    case VAR_ENGINESFXVOLUME:
-                        sfxVolume = scriptEng.operands[i];
-                        if (sfxVolume < 0)
-                            sfxVolume = 0;
-                        if (sfxVolume > MAX_VOLUME)
-                            sfxVolume = MAX_VOLUME;
-                        break;
-                    case VAR_ENGINEBGMVOLUME:
-                        bgmVolume = scriptEng.operands[i];
-                        if (bgmVolume < 0)
-                            bgmVolume = 0;
-                        if (bgmVolume > MAX_VOLUME)
-                            bgmVolume = MAX_VOLUME;
-                        break;
+                    case VAR_ENGINESFXVOLUME: break;
+                    case VAR_ENGINEBGMVOLUME: break;
                     case VAR_ENGINEPLATFORMID: break;
                     case VAR_ENGINETRIALMODE: break;
                     case VAR_KEYPRESSANYSTART: break;
 #if RETRO_USE_HAPTICS
-                    case VAR_ENGINEHAPTICSENABLED: Engine.hapticsEnabled = scriptEng.operands[i]; break;
+                    case VAR_ENGINEHAPTICSENABLED: break;
 #endif
                 }
             }
             else if (opcodeType == SCRIPTVAR_INTCONST) { // int constant
-                scriptCodePtr++;
+                scriptDataPtr++;
             }
             else if (opcodeType == SCRIPTVAR_STRCONST) { // string constant
-                int strLen = scriptCode[scriptCodePtr++];
+                int strLen = scriptData[scriptDataPtr++];
                 for (int c = 0; c < strLen; ++c) {
                     switch (c % 4) {
                         case 0: break;
                         case 1: break;
                         case 2: break;
-                        case 3: ++scriptCodePtr; break;
+                        case 3: ++scriptDataPtr; break;
                         default: break;
                     }
                 }
-                scriptCodePtr++;
+                scriptDataPtr++;
             }
         }
     }
