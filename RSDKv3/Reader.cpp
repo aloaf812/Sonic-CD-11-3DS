@@ -64,6 +64,9 @@ bool CheckRSDKFile(const char *filePath)
         return true;
     }
     else {
+#if RETRO_PLATFORM == RETRO_3DS
+	chdir(BASE_PATH);
+#endif
         Engine.usingDataFile = false;
 #if !RETRO_USE_ORIGINAL_CODE
         Engine.usingDataFile_Config = false;
