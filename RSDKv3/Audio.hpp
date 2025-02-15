@@ -226,6 +226,7 @@ inline void ResumeSound()
         musicStatus = MUSIC_PLAYING;
 }
 
+
 inline void StopAllSfx()
 {
     for (int i = 0; i < CHANNEL_COUNT; ++i) sfxChannels[i].sfxID = -1;
@@ -235,6 +236,17 @@ inline void ReleaseGlobalSfx()
     StopAllSfx();
     for (int i = globalSFXCount - 1; i >= 0; --i) {
         if (sfxList[i].loaded) {
+#if RETRO_USING_SDLMIXER
+	    if (sfxList[i].chunk) {
+                Mix_FreeChunk(sfxList[i].chunk);
+	        sfxList[i].chunk = NULL;
+	    }
+	    //SDL_RWclose(sfxRwops[i]);
+	    sfxRwops[i] = NULL;
+	    //free(sfxData[i]);
+	    sfxData[i] = NULL;
+#endif
+
             StrCopy(sfxList[i].name, "");
             free(sfxList[i].buffer);
             sfxList[i].length = 0;
@@ -247,6 +259,17 @@ inline void ReleaseStageSfx()
 {
     for (int i = stageSFXCount + globalSFXCount; i >= globalSFXCount; --i) {
         if (sfxList[i].loaded) {
+#if RETRO_USING_SDLMIXER
+	    if (sfxList[i].chunk) {
+	        Mix_FreeChunk(sfxList[i].chunk);
+                sfxList[i].chunk = NULL;
+	    }
+	    //SDL_RWclose(sfxRwops[i]);
+	    sfxRwops[i] = NULL;
+	    //free(sfxData[i]);
+	    sfxData[i] = NULL;
+#endif
+
             StrCopy(sfxList[i].name, "");
             free(sfxList[i].buffer);
             sfxList[i].length = 0;
@@ -262,6 +285,10 @@ inline void ReleaseAudioDevice()
     StopAllSfx();
     ReleaseStageSfx();
     ReleaseGlobalSfx();
+
+#if RETRO_USING_SDLMIXER
+    Mix_CloseAudio();
+#endif
 }
 
 #endif // !AUDIO_H
