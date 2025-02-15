@@ -23,9 +23,9 @@ void LoadAnimationFile(const char *filePath)
         sheetIDs[0] = 0;
 
         byte sheetCount = 0;
-        FileRead(&sheetCount, 1); // Sheet Count
+        FileRead(&sheetCount, 1);
 
-        //Read & load each spritesheet
+        // Read & load each spritesheet
         for (int s = 0; s < sheetCount; ++s) {
             FileRead(&fileBuffer, 1);
             if (fileBuffer) {
@@ -45,7 +45,7 @@ void LoadAnimationFile(const char *filePath)
         animFile->animCount     = animCount;
         animFile->aniListOffset = animationCount;
 
-        //Read animations
+        // Read animations
         for (int a = 0; a < animCount; ++a) {
             SpriteAnimation *anim = &animationList[animationCount++];
             anim->frameListOffset = animFrameCount;
@@ -55,7 +55,7 @@ void LoadAnimationFile(const char *filePath)
             FileRead(&anim->frameCount, 1);
             FileRead(&anim->speed, 1);
             FileRead(&anim->loopPoint, 1);
-            FileRead(&anim->rotationFlag, 1);
+            FileRead(&anim->rotationStyle, 1);
 
             for (int j = 0; j < anim->frameCount; ++j) {
                 SpriteFrame *frame = &animFrames[animFrameCount++];
@@ -77,12 +77,13 @@ void LoadAnimationFile(const char *filePath)
                 FileRead(&buffer, 1);
                 frame->pivotY = buffer;
             }
+
             // 90 Degree (Extra rotation Frames) rotation
-            if (anim->rotationFlag == ROTFLAG_STATICFRAMES)
+            if (anim->rotationStyle == ROTSTYLE_STATICFRAMES)
                 anim->frameCount >>= 1;
         }
 
-        //Read Hitboxes
+        // Read Hitboxes
         animFile->hitboxListOffset = hitboxCount;
         FileRead(&fileBuffer, 1);
         for (int i = 0; i < fileBuffer; ++i) {
@@ -119,7 +120,7 @@ AnimationFile *AddAnimationFile(const char *filePath)
     StrCopy(path, "Data/Animations/");
     StrAdd(path, filePath);
 
-    //If matching anim is found return that, otherwise load a new anim
+    // If matching anim is found return that, otherwise load a new anim
     for (int a = 0; a < 0x100; ++a) {
         if (StrLength(animationFileList[a].fileName) <= 0) {
             StrCopy(animationFileList[a].fileName, filePath);
@@ -137,7 +138,7 @@ void ProcessObjectAnimation(void *objScr, void *ent)
 {
     ObjectScript *objectScript = (ObjectScript *)objScr;
     Entity *entity             = (Entity *)ent;
-    SpriteAnimation *sprAnim           = &animationList[objectScript->animFile->aniListOffset + entity->animation];
+    SpriteAnimation *sprAnim   = &animationList[objectScript->animFile->aniListOffset + entity->animation];
 
     if (entity->animationSpeed <= 0) {
         entity->animationTimer += sprAnim->speed;
@@ -147,13 +148,15 @@ void ProcessObjectAnimation(void *objScr, void *ent)
             entity->animationSpeed = 0xF0;
         entity->animationTimer += entity->animationSpeed;
     }
+
     if (entity->animation != entity->prevAnimation) {
         entity->prevAnimation  = entity->animation;
         entity->frame          = 0;
         entity->animationTimer = 0;
         entity->animationSpeed = 0;
     }
-    if (entity->animationTimer > 0xEF) {
+
+    if (entity->animationTimer >= 0xF0) {
         entity->animationTimer -= 0xF0;
         ++entity->frame;
     }
