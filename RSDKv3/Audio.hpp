@@ -167,10 +167,10 @@ inline void StopMusic()
 #if RETRO_USING_SDLMIXER
     Mix_HaltMusic();
     musicStatus = MUSIC_STOPPED;
-    freeMusInfo();
+    FreeMusInfo();
 #else
     musicStatus = MUSIC_STOPPED;
-    freeMusInfo();
+    FreeMusInfo();
 #endif
 }
 
