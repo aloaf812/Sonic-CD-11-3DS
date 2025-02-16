@@ -14,11 +14,12 @@ extern const THEORAPLAY_VideoFrame *videoVidData;
 extern const THEORAPLAY_AudioPacket *videoAudioData;
 extern THEORAPLAY_Io callbacks;
 
-extern byte videoData;
+extern byte videoSurface;
 extern int videoFilePos;
-extern bool videoPlaying;
+extern int videoPlaying; // 0 = not playing, 1 = playing OGV, 2 = playing RSV
 extern int vidFrameMS;
 extern int vidBaseticks;
+extern float videoAR;
 
 void PlayVideoFile(char *filepath);
 void UpdateVideoFrame();
