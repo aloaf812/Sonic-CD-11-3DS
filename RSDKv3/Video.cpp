@@ -1,7 +1,5 @@
 #include "RetroEngine.hpp"
-
-// TODO: all of the functions here have been stubbed for 3DS.
-// Re-implement everything later.
+#include <string>
 
 int currentVideoFrame = 0;
 int videoFrameCount   = 0;
@@ -13,9 +11,9 @@ THEORAPLAY_Decoder *videoDecoder;
 const THEORAPLAY_VideoFrame *videoVidData;
 THEORAPLAY_Io callbacks;
 
-byte videoData    = 0;
+byte videoSurface = 0;
 int videoFilePos  = 0;
-bool videoPlaying = 0;
+int videoPlaying  = 0;
 int vidFrameMS    = 0;
 int vidBaseticks  = 0;
 
@@ -23,23 +21,17 @@ bool videoSkipped = false;
 
 static long videoRead(THEORAPLAY_Io *io, void *buf, long buflen)
 {
-    # if RETRO_USING_SDL
     FileIO *file    = (FileIO *)io->userdata;
     const size_t br = fRead(buf, 1, buflen * sizeof(byte), file);
     if (br == 0)
         return -1;
     return (int)br;
-    #else
-    return -1;
-    #endif
 } // IoFopenRead
 
 static void videoClose(THEORAPLAY_Io *io)
 {
-#if RETRO_USING_SDL2 || RETRO_USING_SDL1
     FileIO *file = (FileIO *)io->userdata;
     fClose(file);
-#endif
 }
 
 void PlayVideoFile(char *filePath)
@@ -53,13 +45,8 @@ void PlayVideoFile(char *filePath)
 
     StrCopy(pathBuffer, "videos/");
     StrAdd(pathBuffer, filePath);
+    StrAdd(pathBuffer, ".ogv");
 
-    if (GetGlobalVariableByName("Options.Soundtrack")) {
-        StrAdd(pathBuffer, ".us.ogv");
-    } else {
-        StrAdd(pathBuffer, ".ogv");
-    }
-    
     bool addPath = true;
     // Fixes ".ani" ".Ani" bug and any other case differences
     char pathLower[0x100];
@@ -76,13 +63,13 @@ void PlayVideoFile(char *filePath)
                 StrCopy(pathBuffer, iter->second.c_str());
                 Engine.forceFolder   = true;
                 Engine.usingDataFile = false;
-                addPath = false;
+                addPath              = false;
                 break;
             }
         }
     }
 #endif
-    
+
     char filepath[0x100];
     if (addPath) {
 #if RETRO_PLATFORM == RETRO_UWP
@@ -107,35 +94,27 @@ void PlayVideoFile(char *filePath)
     }
 
     FileIO *file = fOpen(filepath, "rb");
-#if RETRO_PLATFORM == RETRO_3DS
     if (file) {
-	CloseFile();
-        PlayVideo(filepath);
-	videoPlaying = true;
-        Engine.gameMode = ENGINE_VIDEOWAIT;
-	videoSkipped = false;
-    } else {
-        printLog("could not find %s, ignoring", filepath);
-    }
-#elif RETRO_USING_SDL
-       if (file) {
-        printLog("Loaded File '%s'!", filepath);
+        PrintLog("Loaded File '%s'!", filepath);
 
         callbacks.read     = videoRead;
         callbacks.close    = videoClose;
         callbacks.userdata = (void *)file;
-#if RETRO_USING_SDL2
+#if RETRO_USING_SDL2 && !RETRO_USING_OPENGL
         videoDecoder = THEORAPLAY_startDecode(&callbacks, /*FPS*/ 30, THEORAPLAY_VIDFMT_IYUV, GetGlobalVariableByName("Options.Soundtrack") ? 1 : 0);
 #endif
 
-        //TODO: does SDL1.2 support YUV?
-#if RETRO_USING_SDL1
+        // TODO: does SDL1.2 support YUV?
+#if RETRO_USING_SDL1 && !RETRO_USING_OPENGL
         videoDecoder = THEORAPLAY_startDecode(&callbacks, /*FPS*/ 30, THEORAPLAY_VIDFMT_RGBA, GetGlobalVariableByName("Options.Soundtrack") ? 1 : 0);
 #endif
 
+#if RETRO_USING_OPENGL
+        videoDecoder = THEORAPLAY_startDecode(&callbacks, /*FPS*/ 30, THEORAPLAY_VIDFMT_RGBA, GetGlobalVariableByName("Options.Soundtrack") ? 1 : 0);
+#endif
 
         if (!videoDecoder) {
-            printLog("Video Decoder Error!");
+            PrintLog("Video Decoder Error!");
             return;
         }
         while (!videoVidData) {
@@ -143,7 +122,7 @@ void PlayVideoFile(char *filePath)
                 videoVidData = THEORAPLAY_getVideo(videoDecoder);
         }
         if (!videoVidData) {
-            printLog("Video Error!");
+            PrintLog("Video Error!");
             return;
         }
 
@@ -155,30 +134,24 @@ void PlayVideoFile(char *filePath)
         SetupVideoBuffer(videoWidth, videoHeight);
         vidBaseticks = SDL_GetTicks();
         vidFrameMS   = (videoVidData->fps == 0.0) ? 0 : ((Uint32)(1000.0 / videoVidData->fps));
-        videoPlaying = true;
+        videoPlaying = 1; // playing ogv
         trackID      = TRACK_COUNT - 1;
 
         videoSkipped    = false;
         Engine.gameMode = ENGINE_VIDEOWAIT;
     }
     else {
-        printLog("Couldn't find file '%s'!", filepath);
+        PrintLog("Couldn't find file '%s'!", filepath);
     }
-#endif
 }
 
 void UpdateVideoFrame()
 {
-#if RETRO_PLATFORM == RETRO_3DS
-    if (videodone) {
-         StopVideoPlayback();	
-    }
-#elif RETRO_USING_SDL2 || RETRO_USING_SDL1
-    if (videoPlaying) {
-        if (videoFrameCount > currentVideoFrame) {
-            GFXSurface *surface = &gfxSurface[videoData];
-            byte fileBuffer      = 0;
-            byte fileBuffer2      = 0;
+    if (videoPlaying == 2) {
+        if (currentVideoFrame < videoFrameCount) {
+            GFXSurface *surface = &gfxSurface[videoSurface];
+            byte fileBuffer     = 0;
+            ushort fileBuffer2  = 0;
             FileRead(&fileBuffer, 1);
             videoFilePos += fileBuffer;
             FileRead(&fileBuffer, 1);
@@ -204,13 +177,15 @@ void UpdateVideoFrame()
             FileRead(&fileBuffer2, 2); // IMAGE TOP
             FileRead(&fileBuffer2, 2); // IMAGE WIDTH
             FileRead(&fileBuffer2, 2); // IMAGE HEIGHT
-            FileRead(&fileBuffer, 1); // PaletteType
+            FileRead(&fileBuffer, 1);  // PaletteType
             bool interlaced = (fileBuffer & 0x40) >> 6;
             if (fileBuffer >> 7 == 1) {
                 int c = 0x80;
                 do {
                     ++c;
-                    FileRead(&fileBuffer, 3);
+                    FileRead(&fileBuffer, 1);
+                    FileRead(&fileBuffer, 1);
+                    FileRead(&fileBuffer, 1);
                 } while (c != 0x100);
             }
             ReadGifPictureData(surface->width, surface->height, interlaced, graphicData, surface->dataPosition);
@@ -223,42 +198,32 @@ void UpdateVideoFrame()
             CloseFile();
         }
     }
-#endif
 }
 
 int ProcessVideo()
 {
-    if (videoPlaying) {
-        CheckKeyPress(&keyPress, 0x10);
+    if (videoPlaying == 1) {
+        CheckKeyPress(&keyPress, 0xFF);
 
         if (videoSkipped && fadeMode < 0xFF) {
             fadeMode += 8;
         }
 
-        if (keyPress.A) {
+        if (anyPress || touches > 0) {
             if (!videoSkipped)
                 fadeMode = 0;
 
             videoSkipped = true;
         }
 
-#if RETRO_PLATFORM == RETRO_3DS
-        if (videoSkipped || videodone) {
-            StopVideoPlayback();
-
-	    return 1;
-	}
-#else
         if (!THEORAPLAY_isDecoding(videoDecoder) || (videoSkipped && fadeMode >= 0xFF)) {
             StopVideoPlayback();
-
+            ResumeSound();
             return 1; // video finished
         }
-#endif
 
         // Don't pause or it'll go wild
-        if (videoPlaying) {
-#if RETRO_PLATFORM != RETRO_3DS
+        if (videoPlaying == 1) {
             const Uint32 now = (SDL_GetTicks() - vidBaseticks);
 
             if (!videoVidData)
@@ -290,27 +255,24 @@ int ProcessVideo()
                     // video lagging uh oh
                 }
 
+#if RETRO_USING_OPENGL
+                glBindTexture(GL_TEXTURE_2D, videoBuffer);
+                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, videoVidData->width, videoVidData->height, GL_RGBA, GL_UNSIGNED_BYTE, videoVidData->pixels);
+                glBindTexture(GL_TEXTURE_2D, 0);
+#elif RETRO_USING_SDL2
                 int half_w     = videoVidData->width / 2;
                 const Uint8 *y = (const Uint8 *)videoVidData->pixels;
                 const Uint8 *u = y + (videoVidData->width * videoVidData->height);
                 const Uint8 *v = u + (half_w * (videoVidData->height / 2));
 
-#if RETRO_USING_SDL2
-#if RETRO_SOFTWARE_RENDER
                 SDL_UpdateYUVTexture(Engine.videoBuffer, NULL, y, videoVidData->width, u, half_w, v, half_w);
-#endif
-#endif
-#if RETRO_USING_SDL1
-#if RETRO_SOFTWARE_RENDER
-                uint *videoFrameBuffer = (uint *)Engine.videoBuffer->pixels;
-                memcpy(videoFrameBuffer, videoVidData->pixels, videoVidData->width * videoVidData->height * sizeof(uint));
-#endif
+#elif RETRO_USING_SDL1
+                memcpy(Engine.videoBuffer->pixels, videoVidData->pixels, videoVidData->width * videoVidData->height * sizeof(uint));
 #endif
 
                 THEORAPLAY_freeVideo(videoVidData);
                 videoVidData = NULL;
             }
-#endif
 
             return 2; // its playing as expected
         }
@@ -321,15 +283,7 @@ int ProcessVideo()
 
 void StopVideoPlayback()
 {
-#if RETRO_PLATFORM == RETRO_3DS
-    if (videoPlaying) {
-        CloseVideo();
-        videoPlaying = false;
-    }
-    if (Engine.gameMode != ENGINE_EXITGAME)
-        Engine.gameMode = ENGINE_MAINGAME;
-#elif RETRO_USING_SDL2 || RETRO_USING_SDL1
-    if (videoPlaying) {
+    if (videoPlaying == 1) {
         // `videoPlaying` and `videoDecoder` are read by
         // the audio thread, so lock it to prevent a race
         // condition that results in invalid memory accesses.
@@ -348,40 +302,57 @@ void StopVideoPlayback()
         }
 
         CloseVideoBuffer();
-        videoPlaying = false;
+        videoPlaying = 0;
 
         SDL_UnlockAudio();
     }
-#endif
 }
 
 void SetupVideoBuffer(int width, int height)
 {
-#if RETRO_SOFTWARE_RENDER
-#if RETRO_USING_SDL1
+#if RETRO_USING_OPENGL
+    if (videoBuffer > 0) {
+        glDeleteTextures(1, &videoBuffer);
+        videoBuffer = 0;
+    }
+    glGenTextures(1, &videoBuffer);
+    glBindTexture(GL_TEXTURE_2D, videoBuffer);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, videoVidData->width, videoVidData->height, GL_RGBA, GL_UNSIGNED_BYTE, videoVidData->pixels);
+
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+#elif RETRO_USING_SDL1
     Engine.videoBuffer = SDL_CreateRGBSurface(0, width, height, 32, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
-#endif
-#if RETRO_USING_SDL2
-    Engine.videoBuffer = SDL_CreateTexture(Engine.renderer, SDL_PIXELFORMAT_YV12, SDL_TEXTUREACCESS_STREAMING, width, height);
-#endif
 
     if (!Engine.videoBuffer)
-        printLog("Failed to create video buffer!");
+        PrintLog("Failed to create video buffer!");
+#elif RETRO_USING_SDL2
+    Engine.videoBuffer = SDL_CreateTexture(Engine.renderer, SDL_PIXELFORMAT_YV12, SDL_TEXTUREACCESS_STREAMING, width, height);
+
+    if (!Engine.videoBuffer)
+        PrintLog("Failed to create video buffer!");
 #endif
 }
 
 void CloseVideoBuffer()
 {
-
-#if RETRO_SOFTWARE_RENDER && RETRO_PLATFORM != RETRO_3DS
-    if (videoPlaying) {
-#if RETRO_USING_SDL1
+    if (videoPlaying == 1) {
+#if RETRO_USING_OPENGL
+        if (videoBuffer > 0) {
+            glDeleteTextures(1, &videoBuffer);
+            videoBuffer = 0;
+        }
+#elif RETRO_USING_SDL1
         SDL_FreeSurface(Engine.videoBuffer);
-#endif
-#if RETRO_USING_SDL2
-        SDL_DestroyTexture(Engine.videoBuffer);
-#endif
         Engine.videoBuffer = nullptr;
-    }
+#elif RETRO_USING_SDL2
+        SDL_DestroyTexture(Engine.videoBuffer);
+        Engine.videoBuffer = nullptr;
 #endif
+    }
 }
