@@ -3,16 +3,12 @@
 
 #define GLOBALVAR_COUNT (0x100)
 
-#define ACHIEVEMENT_MAX (0x40)
-#define LEADERBOARD_MAX (0x80)
+#define ACHIEVEMENT_COUNT (0x40)
+#define LEADERBOARD_COUNT (0x80)
 
-#define MOD_MAX (0x100)
+#define MOD_COUNT (0x100)
 
-#define SAVEDATA_MAX (0x2000)
-
-#include <string>
-#include <map>
-#include <unordered_map>
+#define SAVEDATA_SIZE (0x2000)
 
 enum OnlineMenuTypes {
     ONLINEMENU_ACHIEVEMENTS = 0,
@@ -25,38 +21,26 @@ struct Achievement {
 };
 
 struct LeaderboardEntry {
-    int status;
+    int score;
 };
-
-#if RETRO_USE_MOD_LOADER
-struct ModInfo {
-    std::string name;
-    std::string desc;
-    std::string author;
-    std::string version;
-    std::map<std::string, std::string> fileMap;
-    std::string folder;
-    bool useScripts;
-    bool active;
-};
-#endif
 
 extern int globalVariablesCount;
 extern int globalVariables[GLOBALVAR_COUNT];
 extern char globalVariableNames[GLOBALVAR_COUNT][0x20];
 
 extern char gamePath[0x100];
-extern char modsPath[0x100];
-extern int saveRAM[SAVEDATA_MAX];
-extern Achievement achievements[ACHIEVEMENT_MAX];
-extern LeaderboardEntry leaderboard[LEADERBOARD_MAX];
+extern int saveRAM[SAVEDATA_SIZE];
+extern Achievement achievements[ACHIEVEMENT_COUNT];
+extern LeaderboardEntry leaderboards[LEADERBOARD_COUNT];
 
 extern int controlMode;
 extern bool disableTouchControls;
+extern int disableFocusPause;
+extern int disableFocusPause_Config;
 
-#if RETRO_USE_MOD_LOADER
-extern std::vector<ModInfo> modList;
+#if RETRO_USE_MOD_LOADER || !RETRO_USE_ORIGINAL_CODE
 extern bool forceUseScripts;
+extern bool forceUseScripts_Config;
 #endif
 
 inline int GetGlobalVariableByName(const char *name)
@@ -78,66 +62,12 @@ inline void SetGlobalVariableByName(const char *name, int value)
     }
 }
 
-inline bool ReadSaveRAMData()
-{
-    char buffer[0x200];
-#if RETRO_PLATFORM == RETRO_UWP
-    if (!usingCWD)
-        sprintf(buffer, "%s/Sdata.bin",getResourcesPath());
-    else
-        sprintf(buffer, "%sSdata.bin", gamePath);
-#elif RETRO_PLATFORM == RETRO_OSX
-    sprintf(buffer, "%s/SData.bin", gamePath);
-#elif RETRO_PLATFORM == RETRO_iOS
-        sprintf(buffer, "%s/SData.bin", getDocumentsPath());
-#else
-        sprintf(buffer, "%sSdata.bin", gamePath);
-#endif
-
-    // Temp(?)
-    saveRAM[33] = bgmVolume;
-    saveRAM[34] = sfxVolume;
-
-    FileIO *saveFile = fOpen(buffer, "rb");
-    if (!saveFile)
-        return false;
-    fRead(saveRAM, 4u, SAVEDATA_MAX, saveFile);
-
-    fClose(saveFile);
-    return true;
-}
-
-inline bool WriteSaveRAMData()
-{
-    char buffer[0x200];
-#if RETRO_PLATFORM == RETRO_UWP
-    if (!usingCWD)
-        sprintf(buffer, "%s/Sdata.bin",getResourcesPath());
-    else
-        sprintf(buffer, "%sSdata.bin", gamePath);
-#elif RETRO_PLATFORM == RETRO_OSX
-    sprintf(buffer, "%s/SData.bin", gamePath);
-#elif RETRO_PLATFORM == RETRO_iOS
-    sprintf(buffer, "%s/SData.bin", getDocumentsPath());
-#else
-    sprintf(buffer, "%sSdata.bin", gamePath);
-#endif
-    
-    FileIO *saveFile = fOpen(buffer, "wb");
-    if (!saveFile)
-        return false;
-
-    //Temp
-    saveRAM[33] = bgmVolume;
-    saveRAM[34] = sfxVolume;
-
-    fWrite(saveRAM, 4u, SAVEDATA_MAX, saveFile);
-    fClose(saveFile);
-    return true;
-}
+extern bool useSGame;
+bool ReadSaveRAMData();
+bool WriteSaveRAMData();
 
 void InitUserdata();
-void writeSettings();
+void WriteSettings();
 void ReadUserdata();
 void WriteUserdata();
 
@@ -147,10 +77,4 @@ void SetLeaderboard(int leaderboardID, int result);
 inline void LoadAchievementsMenu() { ReadUserdata(); }
 inline void LoadLeaderboardsMenu() { ReadUserdata(); }
 
-#if RETRO_USE_MOD_LOADER
-void initMods();
-bool loadMod(ModInfo *info, std::string modsPath, std::string folder, bool active);
-void saveMods();
-#endif
-
-#endif //!USERDATA_H
+#endif //! USERDATA_H
