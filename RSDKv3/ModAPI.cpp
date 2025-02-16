@@ -1,20 +1,24 @@
 #include "RetroEngine.hpp"
 
+#if RETRO_USE_MOD_LOADER || !RETRO_USE_ORIGINAL_CODE
+char savePath[0x100];
+#endif
+
 #if RETRO_USE_MOD_LOADER
 std::vector<ModInfo> modList;
 int activeMod = -1;
 
 char modsPath[0x100];
 
-bool redirectSave = false;
-char savePath[0x100];
+bool redirectSave           = false;
+bool disableSaveIniOverride = false;
 
 char modTypeNames[OBJECT_COUNT][0x40];
 char modScriptPaths[OBJECT_COUNT][0x40];
 byte modScriptFlags[OBJECT_COUNT];
 byte modObjCount = 0;
 
-char playerNames[PLAYER_MAX][0x20];
+char playerNames[PLAYERNAME_COUNT][0x20];
 byte playerCount = 0;
 
 #include <filesystem>
@@ -27,16 +31,17 @@ int OpenModMenu()
     return 1;
 }
 
-//#if RETRO_PLATFORM == RETRO_ANDROID
-// namespace fs = std::__fs::filesystem;
-//#else
+#if RETRO_PLATFORM == RETRO_ANDROID
+namespace fs = std::__fs::filesystem;
+#else
 namespace fs = std::filesystem;
-//#endif
+#endif
 
-fs::path resolvePath(fs::path given)
+fs::path ResolvePath(fs::path given)
 {
     if (given.is_relative())
         given = fs::current_path() / given; // thanks for the weird syntax!
+
     for (auto &p : fs::directory_iterator{ given.parent_path() }) {
         char pbuf[0x100];
         char gbuf[0x100];
@@ -53,17 +58,18 @@ fs::path resolvePath(fs::path given)
     return given; // might work might not!
 }
 
-void initMods()
+void InitMods()
 {
     modList.clear();
-    forceUseScripts   = forceUseScripts_Config;
-    disableFocusPause = disableFocusPause_Config;
-    redirectSave      = false;
+    forceUseScripts        = forceUseScripts_Config;
+    disableFocusPause      = disableFocusPause_Config;
+    redirectSave           = false;
+    disableSaveIniOverride = false;
     sprintf(savePath, "");
 
     char modBuf[0x100];
     sprintf(modBuf, "%smods", modsPath);
-    fs::path modPath = resolvePath(modBuf);
+    fs::path modPath = ResolvePath(modBuf);
 
     if (fs::exists(modPath) && fs::is_directory(modPath)) {
         std::string mod_config = modPath.string() + "/modconfig.ini";
@@ -76,7 +82,7 @@ void initMods()
                 bool active = false;
                 ModInfo info;
                 modConfig.GetBool("mods", modConfig.items[m].key, &active);
-                if (loadMod(&info, modPath.string(), modConfig.items[m].key, active))
+                if (LoadMod(&info, modPath.string(), modConfig.items[m].key, active))
                     modList.push_back(info);
             }
         }
@@ -102,37 +108,42 @@ void initMods()
                     }
 
                     if (flag) {
-                        if (loadMod(&info, modPath.string(), modDirPath.filename().string(), false))
+                        if (LoadMod(&info, modPath.string(), modDirPath.filename().string(), false))
                             modList.push_back(info);
                     }
                 }
             }
         } catch (fs::filesystem_error fe) {
-            printLog("Mods Folder Scanning Error: ");
-            printLog(fe.what());
+            PrintLog("Mods Folder Scanning Error: ");
+            PrintLog(fe.what());
         }
     }
 
     disableFocusPause = disableFocusPause_Config;
     forceUseScripts   = forceUseScripts_Config;
     sprintf(savePath, "");
-    redirectSave = false;
+    redirectSave           = false;
+    disableSaveIniOverride = false;
     for (int m = 0; m < modList.size(); ++m) {
         if (!modList[m].active)
             continue;
         if (modList[m].useScripts)
             forceUseScripts = true;
+        if (modList[m].disableFocusPause)
+            disableFocusPause |= modList[m].disableFocusPause;
         if (modList[m].redirectSave) {
             sprintf(savePath, "%s", modList[m].savePath.c_str());
             redirectSave = true;
         }
+        if (modList[m].disableSaveIniOverride)
+            disableSaveIniOverride = true;
     }
 
     ReadSaveRAMData();
     ReadUserdata();
 }
 
-bool loadMod(ModInfo *info, std::string modsPath, std::string folder, bool active)
+bool LoadMod(ModInfo *info, std::string modsPath, std::string folder, bool active)
 {
     if (!info)
         return false;
@@ -182,7 +193,7 @@ bool loadMod(ModInfo *info, std::string modsPath, std::string folder, bool activ
 
         info->active = active;
 
-        scanModFolder(info);
+        ScanModFolder(info);
 
         info->useScripts = false;
         modSettings.GetBool("", "TxtScripts", &info->useScripts);
@@ -190,24 +201,29 @@ bool loadMod(ModInfo *info, std::string modsPath, std::string folder, bool activ
             forceUseScripts = true;
 
         info->disableFocusPause = false;
-        modSettings.GetBool("", "DisableFocusPause", &info->disableFocusPause);
+        modSettings.GetInteger("", "DisableFocusPause", &info->disableFocusPause);
         if (info->disableFocusPause && info->active)
-            disableFocusPause = true;
+            disableFocusPause |= info->disableFocusPause;
 
         info->redirectSave = false;
         modSettings.GetBool("", "RedirectSaveRAM", &info->redirectSave);
-        if (info->redirectSave && info->active) {
+        if (info->redirectSave) {
             char path[0x100];
             sprintf(path, "mods/%s/", folder.c_str());
             info->savePath = path;
         }
+
+        info->disableSaveIniOverride = false;
+        modSettings.GetBool("", "DisableSaveIniOverride", &info->disableSaveIniOverride);
+        if (info->disableSaveIniOverride && info->active)
+            disableSaveIniOverride = true;
 
         return true;
     }
     return false;
 }
 
-void scanModFolder(ModInfo *info)
+void ScanModFolder(ModInfo *info)
 {
     if (!info)
         return;
@@ -215,12 +231,12 @@ void scanModFolder(ModInfo *info)
     char modBuf[0x100];
     sprintf(modBuf, "%smods", modsPath);
 
-    fs::path modPath = resolvePath(modBuf);
+    fs::path modPath = ResolvePath(modBuf);
 
     const std::string modDir = modPath.string() + "/" + info->folder;
 
     // Check for Data/ replacements
-    fs::path dataPath = resolvePath(modDir + "/Data");
+    fs::path dataPath = ResolvePath(modDir + "/Data");
 
     if (fs::exists(dataPath) && fs::is_directory(dataPath)) {
         try {
@@ -248,7 +264,7 @@ void scanModFolder(ModInfo *info)
                             buffer[i - tokenPos] = modBuf[i] == '\\' ? '/' : modBuf[i];
                         }
 
-                        // printLog(modBuf);
+                        // PrintLog(modBuf);
                         std::string path(buffer);
                         std::string modPath(modBuf);
                         char pathLower[0x100];
@@ -262,13 +278,13 @@ void scanModFolder(ModInfo *info)
                 }
             }
         } catch (fs::filesystem_error fe) {
-            printLog("Data Folder Scanning Error: ");
-            printLog(fe.what());
+            PrintLog("Data Folder Scanning Error: ");
+            PrintLog(fe.what());
         }
     }
 
     // Check for Scripts/ replacements
-    fs::path scriptPath = resolvePath(modDir + "/Scripts");
+    fs::path scriptPath = ResolvePath(modDir + "/Scripts");
 
     if (fs::exists(scriptPath) && fs::is_directory(scriptPath)) {
         try {
@@ -296,7 +312,7 @@ void scanModFolder(ModInfo *info)
                             buffer[i - tokenPos] = modBuf[i] == '\\' ? '/' : modBuf[i];
                         }
 
-                        // printLog(modBuf);
+                        // PrintLog(modBuf);
                         std::string path(buffer);
                         std::string modPath(modBuf);
                         char pathLower[0x100];
@@ -310,13 +326,13 @@ void scanModFolder(ModInfo *info)
                 }
             }
         } catch (fs::filesystem_error fe) {
-            printLog("Script Folder Scanning Error: ");
-            printLog(fe.what());
+            PrintLog("Script Folder Scanning Error: ");
+            PrintLog(fe.what());
         }
     }
 
     // Check for Videos/ replacements
-    fs::path videosPath = resolvePath(modDir + "/Videos");
+    fs::path videosPath = ResolvePath(modDir + "/Videos");
 
     if (fs::exists(videosPath) && fs::is_directory(videosPath)) {
         try {
@@ -344,7 +360,7 @@ void scanModFolder(ModInfo *info)
                             buffer[i - tokenPos] = modBuf[i] == '\\' ? '/' : modBuf[i];
                         }
 
-                        // printLog(modBuf);
+                        // PrintLog(modBuf);
                         std::string path(buffer);
                         std::string modPath(modBuf);
                         char pathLower[0x100];
@@ -358,17 +374,17 @@ void scanModFolder(ModInfo *info)
                 }
             }
         } catch (fs::filesystem_error fe) {
-            printLog("Videos Folder Scanning Error: ");
-            printLog(fe.what());
+            PrintLog("Videos Folder Scanning Error: ");
+            PrintLog(fe.what());
         }
     }
 }
 
-void saveMods()
+void SaveMods()
 {
     char modBuf[0x100];
     sprintf(modBuf, "%smods", modsPath);
-    fs::path modPath = resolvePath(modBuf);
+    fs::path modPath = ResolvePath(modBuf);
 
     if (fs::exists(modPath) && fs::is_directory(modPath)) {
         std::string mod_config = modPath.string() + "/modconfig.ini";
@@ -388,12 +404,16 @@ void RefreshEngine()
 {
     // Reload entire engine
     Engine.LoadGameConfig("Data/Game/GameConfig.bin");
-#if RETRO_USING_SDL1 || RETRO_USING_SDL2
+#if RETRO_USING_SDL2
     if (Engine.window) {
         char gameTitle[0x40];
-        sprintf(gameTitle, "%s%s", Engine.gameWindowText, Engine.usingDataFile ? "" : " (Using Data Folder)");
+        sprintf(gameTitle, "%s%s", Engine.gameWindowText, Engine.usingDataFile_Config ? "" : " (Using Data Folder)");
         SDL_SetWindowTitle(Engine.window, gameTitle);
     }
+#elif RETRO_USING_SDL1
+    char gameTitle[0x40];
+    sprintf(gameTitle, "%s%s", Engine.gameWindowText, Engine.usingDataFile_Config ? "" : " (Using Data Folder)");
+    SDL_WM_SetCaption(gameTitle, NULL);
 #endif
 
     ReleaseGlobalSfx();
@@ -402,24 +422,32 @@ void RefreshEngine()
     disableFocusPause = disableFocusPause_Config;
     forceUseScripts   = forceUseScripts_Config;
     sprintf(savePath, "");
-    redirectSave = false;
+    redirectSave           = false;
+    disableSaveIniOverride = false;
     for (int m = 0; m < modList.size(); ++m) {
         if (!modList[m].active)
             continue;
         if (modList[m].useScripts)
             forceUseScripts = true;
+        if (modList[m].disableFocusPause)
+            disableFocusPause |= modList[m].disableFocusPause;
         if (modList[m].redirectSave) {
             sprintf(savePath, "%s", modList[m].savePath.c_str());
             redirectSave = true;
         }
+        if (modList[m].disableSaveIniOverride)
+            disableSaveIniOverride = true;
     }
 
-    saveMods();
+    SaveMods();
 
     ReadSaveRAMData();
     ReadUserdata();
 }
 
+#endif
+
+#if RETRO_USE_MOD_LOADER || !RETRO_USE_ORIGINAL_CODE
 int GetSceneID(byte listID, const char *sceneName)
 {
     if (listID >= 3)
@@ -453,5 +481,4 @@ int GetSceneID(byte listID, const char *sceneName)
     }
     return -1;
 }
-
 #endif
